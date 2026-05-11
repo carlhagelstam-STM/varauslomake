@@ -5,56 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Varauslomake – Suomen Tuulilasimestarit</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
   :root {
-    --bg: #f5f4f1;
-    --surface: #ffffff;
-    --surface2: #f9f8f6;
-    --border: #e2e0da;
-    --border2: #ccc9c0;
-    --text: #1a1916;
-    --text2: #6b6860;
-    --text3: #9e9b94;
-    --accent: #1d4ed8;
-    --accent-light: #eff6ff;
-    --success: #15803d;
-    --success-light: #f0fdf4;
-    --danger: #dc2626;
-    --radius: 10px;
-    --radius-lg: 14px;
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222536;
+    --surface3: #2a2d3e;
+    --border: #2e3248;
+    --border2: #3d4160;
+    --text: #f0f1f5;
+    --text2: #9ba3c0;
+    --text3: #5c6480;
+    --accent: #4f7eff;
+    --accent-light: #1a2550;
+    --success: #34d399;
+    --success-light: #0d2e22;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --radius: 8px;
+    --radius-lg: 12px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
     padding: 2rem 1rem 4rem;
+    line-height: 1.5;
   }
 
   .page-header {
-    max-width: 720px;
-    margin: 0 auto 2rem;
+    max-width: 740px;
+    margin: 0 auto 1.5rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 1rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
   }
 
   .logo-area h1 {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 17px;
+    font-weight: 700;
     color: var(--text);
+    letter-spacing: -0.02em;
   }
 
   .logo-area p {
-    font-size: 13px;
-    color: var(--text2);
-    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 3px;
+    letter-spacing: 0.02em;
   }
 
   #auth-btn {
@@ -64,16 +71,16 @@
     padding: 8px 16px;
     border-radius: var(--radius);
     border: 1px solid var(--border2);
-    background: var(--surface);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s;
   }
-  #auth-btn:hover { background: var(--surface2); }
-  #auth-btn.signed-in { color: var(--success); border-color: #86efac; background: var(--success-light); }
+  #auth-btn:hover { background: var(--surface3); color: var(--text); }
+  #auth-btn.signed-in { color: var(--success); border-color: #065f46; background: var(--success-light); }
 
   .auth-dot {
     width: 8px; height: 8px;
@@ -84,7 +91,7 @@
   .auth-dot.green { background: var(--success); }
 
   .form-wrap {
-    max-width: 720px;
+    max-width: 740px;
     margin: 0 auto;
   }
 
@@ -96,23 +103,27 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 10px 16px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   .varaaja-bar label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text2);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
   .varaaja-bar input {
     flex: 1;
     border: none;
     background: transparent;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 14px;
+    font-weight: 500;
     color: var(--text);
     outline: none;
   }
+  .varaaja-bar input::placeholder { color: var(--text3); }
   .saved-tag {
     font-size: 11px;
     color: var(--success);
@@ -126,16 +137,25 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 16px 20px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .section-title {
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text3);
     margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
   }
 
   .row { display: grid; gap: 10px; margin-bottom: 10px; }
@@ -144,14 +164,14 @@
   .col-last { margin-bottom: 0; }
 
   .field { display: flex; flex-direction: column; gap: 5px; }
-  .field label { font-size: 12px; font-weight: 500; color: var(--text2); }
+  .field label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
 
   .field input,
   .field select,
   .field textarea {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    padding: 8px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 8px 11px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
     background: var(--surface2);
@@ -160,27 +180,29 @@
     -webkit-appearance: none;
     appearance: none;
   }
+  .field input::placeholder, .field textarea::placeholder { color: var(--text3); }
   .field input:focus,
   .field select:focus,
   .field textarea:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(29,78,216,0.08);
-    background: var(--surface);
+    box-shadow: 0 0 0 3px rgba(79,126,255,0.12);
+    background: var(--surface3);
   }
   .field select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239e9b94' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6480' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 32px;
+    background-position: right 11px center;
+    padding-right: 30px;
     cursor: pointer;
   }
-  .field textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+  .field select option { background: var(--surface2); color: var(--text); }
+  .field textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
 
   .mono input {
-    font-family: 'DM Mono', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
   }
 
@@ -195,21 +217,17 @@
     border: 1px solid var(--border2);
     background: var(--surface2);
     color: var(--text2);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.12s;
   }
-  .tyyppi-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .tyyppi-btn.active {
-    background: var(--text);
-    border-color: var(--text);
-    color: #fff;
-  }
+  .tyyppi-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .tyyppi-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .tyyppi-custom {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
     padding: 6px 12px;
     border-radius: 20px;
     border: 1px dashed var(--border2);
@@ -229,9 +247,11 @@
     margin-bottom: 6px;
   }
   .tarvike-header span {
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 10px;
+    font-weight: 600;
     color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     padding-left: 4px;
   }
   .tarvike-row {
@@ -242,8 +262,8 @@
     align-items: center;
   }
   .tarvike-row input {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
     padding: 7px 10px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
@@ -252,7 +272,8 @@
     outline: none;
     transition: border-color 0.15s;
   }
-  .tarvike-row input:focus { border-color: var(--accent); background: var(--surface); }
+  .tarvike-row input::placeholder { color: var(--text3); }
+  .tarvike-row input:focus { border-color: var(--accent); background: var(--surface3); }
   .rm-btn {
     width: 28px; height: 28px;
     border-radius: 6px;
@@ -268,12 +289,12 @@
     line-height: 1;
     padding: 0;
   }
-  .rm-btn:hover { background: #fee2e2; color: var(--danger); }
+  .rm-btn:hover { background: rgba(248,113,113,0.1); color: var(--danger); }
 
   .add-row-btn {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
-    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
     color: var(--text3);
     background: none;
     border: 1px dashed var(--border2);
@@ -282,162 +303,172 @@
     cursor: pointer;
     margin-top: 4px;
     transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
-  .add-row-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .add-row-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
 
   .vakuutus-extra { margin-top: 12px; }
   .hidden { display: none; }
 
-  .checkbox-group {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-  }
+  .checkbox-group { display: flex; gap: 8px; flex-wrap: wrap; }
   .cb-item {
     display: flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
     user-select: none;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    transition: all 0.12s;
   }
-  .cb-item input[type="checkbox"] {
-    width: 17px;
-    height: 17px;
-    border-radius: 5px;
-    border: 1.5px solid var(--border2);
-    accent-color: var(--text);
-    cursor: pointer;
-  }
-  .cb-item span {
-    font-size: 14px;
-    color: var(--text);
-    font-weight: 500;
-  }
+  .cb-item:hover { border-color: var(--accent); background: var(--accent-light); }
+  .cb-item input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+  .cb-item span { font-size: 13px; color: var(--text); font-weight: 500; }
 
-  .submit-area {
-    margin-top: 16px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
+  .submit-area { margin-top: 14px; }
 
   #submit-btn {
-    flex: 1;
-    min-width: 200px;
-    padding: 13px 24px;
+    width: 100%;
+    padding: 14px 24px;
     border-radius: var(--radius-lg);
     border: none;
-    background: #1a1916;
+    background: var(--accent);
     color: #fff;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
     cursor: pointer;
     transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: -0.01em;
   }
-  #submit-btn:hover { opacity: 0.85; }
-  #submit-btn:active { transform: scale(0.98); }
-  #submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  #submit-btn:hover { opacity: 0.88; }
+  #submit-btn:active { transform: scale(0.99); }
+  #submit-btn:disabled { opacity: 0.35; cursor: not-allowed; background: var(--surface3); color: var(--text3); }
 
   .toast {
     position: fixed;
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%) translateY(80px);
-    background: var(--text);
-    color: #fff;
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    color: var(--text);
     padding: 12px 24px;
     border-radius: var(--radius-lg);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 9999;
     white-space: nowrap;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
-  .toast.success { background: var(--success); }
-  .toast.error { background: var(--danger); }
+  .toast.success { background: var(--success-light); border-color: #065f46; color: var(--success); }
+  .toast.error { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); color: var(--danger); }
 
-  /* Mode toggle – Asennus / Tarjous */
+  /* Mode toggle */
   .mode-toggle {
     display: flex;
-    gap: 0;
     background: var(--surface2);
-    border: 1px solid var(--border2);
+    border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 3px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     width: fit-content;
   }
   .mode-btn {
-    padding: 9px 28px;
-    border-radius: 10px;
+    padding: 8px 24px;
+    border-radius: 9px;
     border: none;
     background: transparent;
-    color: var(--text2);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
+    color: var(--text3);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
   }
-  .mode-btn.active-asennus {
-    background: #1a1916;
-    color: #fff;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
-  }
-  .mode-btn.active-tarjous {
-    background: #b45309;
-    color: #fff;
-    box-shadow: 0 1px 4px rgba(180,83,9,0.25);
-  }
+  .mode-btn.active-asennus { background: var(--surface3); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+  .mode-btn.active-tarjous { background: rgba(251,191,36,0.15); color: var(--warning); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
   .mode-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 10px;
+    font-weight: 700;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    padding: 3px 10px;
+    padding: 2px 8px;
     border-radius: 20px;
-    margin-left: 10px;
+    margin-left: 8px;
     vertical-align: middle;
   }
-  .mode-badge.asennus { background: #f0fdf4; color: var(--success); }
-  .mode-badge.tarjous { background: #fff7ed; color: #b45309; }
+  .mode-badge.asennus { background: var(--success-light); color: var(--success); }
+  .mode-badge.tarjous { background: rgba(251,191,36,0.12); color: var(--warning); }
 
   .piste-select {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     gap: 8px;
-    margin-bottom: 0;
   }
   .piste-btn {
-    padding: 9px 10px;
+    padding: 10px;
     border-radius: var(--radius);
-    border: 1px solid var(--border2);
+    border: 1px solid var(--border);
     background: var(--surface2);
     color: var(--text2);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
     text-align: center;
     transition: all 0.12s;
   }
-  .piste-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .piste-btn.active {
-    background: var(--accent-light);
-    border-color: var(--accent);
-    color: var(--accent);
-    font-weight: 600;
+  .piste-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .piste-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .piste-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
   }
+  .piste-btn.disabled::after {
+    content: ' – Ei yhdistetty';
+    font-size: 9px;
+    display: block;
+    color: var(--text3);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+  .piste-test {
+    border-color: #065f46;
+    color: var(--success);
+    background: var(--success-light);
+  }
+  .piste-test:hover { border-color: var(--success); background: rgba(52,211,153,0.15); color: var(--success); }
+  .piste-test.active { box-shadow: 0 0 0 1px var(--success); }
 
   @media (max-width: 560px) {
     .col-2, .col-3 { grid-template-columns: 1fr; }
     .tarvike-header, .tarvike-row { grid-template-columns: 1.5fr 1fr 28px; }
     .tarvike-header span:nth-child(3), .tarvike-row input:nth-child(3) { display: none; }
+  }
+
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    #auth-btn, .mode-toggle, .submit-area, .toast { display: none !important; }
+    .page-header { border-bottom: 2px solid #000; }
+    .logo-area h1, .logo-area p { color: #000; }
+    .section { background: #fff; border: 1px solid #aaa; break-inside: avoid; }
+    .section-title { color: #333; }
+    .section-title::after { background: #aaa; }
+    .field label { color: #333; }
+    .field input, .field select, .field textarea { background: #fff; border: 1px solid #aaa; color: #000; }
+    .piste-btn, .tyyppi-btn { background: #fff; border: 1px solid #aaa; color: #000; }
+    .piste-btn.active, .tyyppi-btn.active { background: #eee; font-weight: bold; }
+    .piste-btn.disabled { opacity: 0.3; }
+    .cb-item { background: #fff; border: 1px solid #aaa; color: #000; }
   }
 </style>
 </head>
@@ -475,13 +506,14 @@
   <div class="section">
     <div class="section-title">Asennuspiste</div>
     <div class="piste-select" id="piste-select">
-      <button class="piste-btn" data-piste="Hatanpää" data-cal="HATANPAA_CALENDAR_ID@group.calendar.google.com">Hatanpää</button>
-      <button class="piste-btn" data-piste="Kuopio" data-cal="KUOPIO_CALENDAR_ID@group.calendar.google.com">Kuopio</button>
-      <button class="piste-btn" data-piste="Lahti" data-cal="LAHTI_CALENDAR_ID@group.calendar.google.com">Lahti</button>
-      <button class="piste-btn" data-piste="Lempäälä" data-cal="LEMPÄÄLÄ_CALENDAR_ID@group.calendar.google.com">Lempäälä</button>
-      <button class="piste-btn" data-piste="Lielahti" data-cal="LIELAHTI_CALENDAR_ID@group.calendar.google.com">Lielahti</button>
-      <button class="piste-btn" data-piste="Vantaa" data-cal="VANTAA_CALENDAR_ID@group.calendar.google.com">Vantaa</button>
-      <button class="piste-btn" data-piste="Ylöjärvi" data-cal="YLOJARVI_CALENDAR_ID@group.calendar.google.com">Ylöjärvi</button>
+      <button class="piste-btn disabled" data-piste="Hatanpää" data-cal="">Hatanpää</button>
+      <button class="piste-btn disabled" data-piste="Kuopio" data-cal="">Kuopio</button>
+      <button class="piste-btn disabled" data-piste="Lahti" data-cal="">Lahti</button>
+      <button class="piste-btn disabled" data-piste="Lempäälä" data-cal="">Lempäälä</button>
+      <button class="piste-btn disabled" data-piste="Lielahti" data-cal="">Lielahti</button>
+      <button class="piste-btn disabled" data-piste="Vantaa" data-cal="">Vantaa</button>
+      <button class="piste-btn disabled" data-piste="Ylöjärvi" data-cal="">Ylöjärvi</button>
+      <button class="piste-btn piste-test" data-piste="TEST" data-cal="7d4afd2a7c67181d4963f25ed5b090f2d60786fe4fafbc266be482f3b22ca623@group.calendar.google.com">🧪 TEST</button>
     </div>
   </div>
 
@@ -684,6 +716,7 @@
 
   <div class="submit-area">
     <button id="submit-btn" disabled>Kirjaudu ensin Google-tilille</button>
+    <button id="print-btn" onclick="window.print()">🖨️ Tulosta lomake</button>
   </div>
 
 </div>
@@ -785,6 +818,7 @@ vakuutusSelect.addEventListener('change', () => {
 // --- Asennuspiste ---
 document.querySelectorAll('.piste-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    if (btn.classList.contains('disabled')) return;
     document.querySelectorAll('.piste-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     selectedPiste = btn.dataset.piste;
@@ -986,7 +1020,9 @@ function createEvent() {
     end: { dateTime: endDt.toISOString(), timeZone: 'Europe/Helsinki' },
   };
 
-  const calId = isTarjous ? TARJOUS_CALENDAR_ID : CALENDAR_IDS[selectedPiste];
+  const activePiste = document.querySelector('.piste-btn.active');
+  const calId = activePiste?.dataset.cal;
+  if (!calId) { showToast('Valitse asennuspiste', 'error'); return; }
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   btn.textContent = isTarjous ? 'Tallennetaan tarjousta...' : 'Luodaan varausta...';
