@@ -1608,6 +1608,7 @@ async function fetchCalendarColors() {
       });
     }
     console.log('Calendar colors loaded:', data.event);
+    console.log('Color map (hex→id):', calendarColorMap);
   } catch(e) {
     console.warn('Värien haku epäonnistui:', e);
   }
@@ -1633,22 +1634,20 @@ const GOOGLE_EVENT_COLORS = {
 function getColorId(tyyppi, isTarjous) {
   // Yritetään löytää oikea ID haetusta värikartasta
   if (Object.keys(calendarColorMap).length > 0) {
-    // Kurpitsa / Tangerine = oranssi ~#F6BF26 tai #ffb878
-    // Riikinkukko / Peacock = sinivihreä ~#46d6db
-    // Mandariini / Tangerine = oranssi ~#ffb878
     const targets = isTarjous
-      ? ['#f6bf26', '#ffb878', '#fb4c2f'] // Kurpitsa-sävyt
-      : tyyppi === 'REKLAMAATIO'
-        ? ['#ffb878', '#f6bf26', '#ff887c'] // Mandariini-sävyt
-        : ['#46d6db', '#7ae28c', '#5484ed']; // Riikinkukko-sävyt
+      ? ['#f6bf26', '#ffb878', '#fb4c2f']
+      : (tyyppi === 'REKLAMAATIO' || tyyppi === 'KORJAUS')
+        ? ['#ffb878', '#f6bf26', '#ff887c']
+        : ['#46d6db', '#7ae28c', '#5484ed'];
     for (const hex of targets) {
       if (calendarColorMap[hex]) return calendarColorMap[hex];
     }
   }
-  // Fallback: Googlen viralliset ID:t
-  if (isTarjous) return '5';              // Banaani/Kurpitsa
-  if (tyyppi === 'REKLAMAATIO') return '6'; // Mandariini
-  return '7';                               // Riikinkukko
+  // Fallback kovakoodatut ID:t
+  console.log('getColorId fallback, tyyppi:', tyyppi, 'isTarjous:', isTarjous);
+  if (isTarjous) return '5';                                        // Banaani/Kurpitsa
+  if (tyyppi === 'REKLAMAATIO' || tyyppi === 'KORJAUS') return '6'; // Mandariini
+  return '7';                                                        // Riikinkukko
 }
 
 function createEvent() {
