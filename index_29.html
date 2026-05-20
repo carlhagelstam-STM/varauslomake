@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Varauslomake – Suomen Tuulilasimestarit</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪟</text></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Titillium+Web:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  /* ── TUMMA TEEMA (oletus) ── */
+  :root {
+    --bg: #1c1c1c;
+    --surface: #2a2a2a;
+    --surface2: #303131;
+    --surface3: #3a3a3a;
+    --border: #3f3f40;
+    --border2: #4e4e4f;
+    --text: #f0f0f0;
+    --text2: #aaaaaa;
+    --text3: #888586;
+    --accent: #E50420;
+    --accent-hover: #c4261b;
+    --accent-light: #2a0408;
+    --success: #2c901e;
+    --success-light: #0d2210;
+    --danger: #ff5126;
+    --warning: #fbbf24;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --logo-filter: invert(1);
+  }
+
+  /* ── VAALEA TEEMA ── */
+  body.light {
+    --bg: #f0f0f0;
+    --surface: #ffffff;
+    --surface2: #f7f7f7;
+    --surface3: #eeeeee;
+    --border: #dddddd;
+    --border2: #cccccc;
+    --text: #1c1c1c;
+    --text2: #555555;
+    --text3: #888586;
+    --accent: #E50420;
+    --accent-hover: #c4261b;
+    --accent-light: #ffbebe;
+    --success: #2c901e;
+    --success-light: #d0f1e8;
+    --danger: #ff5126;
+    --logo-filter: none;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .page-header {
+    max-width: 740px;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .logo-lockup {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-windshield {
+    color: var(--text);
+    flex-shrink: 0;
+  }
+
+  .logo-area h1 {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.03em;
+  }
+
+  .logo-area p {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  #theme-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  #theme-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+
+  #auth-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  #auth-btn:hover { background: var(--surface3); color: var(--text); }
+  #auth-btn.signed-in { color: var(--success); border-color: #065f46; background: var(--success-light); }
+
+  .auth-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border2);
+    flex-shrink: 0;
+  }
+  .auth-dot.green { background: var(--success); }
+
+  .form-wrap {
+    max-width: 740px;
+    margin: 0 auto;
+  }
+
+  .varaaja-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 10px 16px;
+    margin-bottom: 10px;
+  }
+  .varaaja-bar label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .varaaja-bar input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    outline: none;
+  }
+  .varaaja-bar input::placeholder { color: var(--text3); }
+  .saved-tag {
+    font-size: 11px;
+    color: var(--success);
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 10px;
+  }
+
+  .section-title {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Titillium Web', sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .row { display: grid; gap: 10px; margin-bottom: 10px; }
+  .col-2 { grid-template-columns: 1fr 1fr; }
+  .col-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .col-last { margin-bottom: 0; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .field input,
+  .field select,
+  .field textarea {
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    padding: 8px 11px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .field input::placeholder, .field textarea::placeholder { color: var(--text3); }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,126,255,0.12);
+    background: var(--surface3);
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6480' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+    padding-right: 30px;
+    cursor: pointer;
+  }
+  .field select option { background: var(--surface2); color: var(--text); }
+  .field textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
+
+  .mono input {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .tyyppi-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tyyppi-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .tyyppi-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .tyyppi-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .tyyppi-custom {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px dashed var(--border2);
+    background: transparent;
+    color: var(--text);
+    width: 160px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .tyyppi-custom:focus { border-color: var(--accent); border-style: solid; }
+  .tyyppi-custom::placeholder { color: var(--text3); }
+
+  .tarvike-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 28px;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .tarvike-header span {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-left: 4px;
+  }
+  .tarvike-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 28px;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .tarvike-row input {
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px;
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .tarvike-row input::placeholder { color: var(--text3); }
+  .tarvike-row input:focus { border-color: var(--accent); background: var(--surface3); }
+  .rm-btn {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: var(--text3);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    line-height: 1;
+    padding: 0;
+  }
+  .rm-btn:hover { background: rgba(248,113,113,0.1); color: var(--danger); }
+
+  .add-row-btn {
+    font-family: 'Manrope', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    background: none;
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 6px 14px;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .add-row-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+
+  .vakuutus-extra { margin-top: 12px; }
+  .hidden { display: none; }
+
+  .checkbox-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    transition: all 0.12s;
+  }
+  .cb-item:hover { border-color: var(--accent); background: var(--accent-light); }
+  .cb-item input[type="checkbox"], .cb-item input[type="radio"] { display: none; }
+  .cb-box {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 900;
+    color: transparent;
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+  .cb-item input[type="checkbox"]:checked + .cb-box, .cb-item input[type="radio"]:checked + .cb-box {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .cb-item input[type="checkbox"]:checked + .cb-box::after, .cb-item input[type="radio"]:checked + .cb-box::after { content: "\2715"; }
+  .cb-item input[type="checkbox"]:checked + .cb-box + span, .cb-item input[type="radio"]:checked + .cb-box + span { color: var(--accent); font-weight: 700; }
+  .cb-item:hover .cb-box { border-color: var(--accent); }
+  .cb-item input[type="radio"]:checked ~ .cb-box { border-radius: 50%; }
+  .cb-item span { font-size: 13px; color: var(--text); font-weight: 500; transition: all 0.12s; }
+
+  .submit-area { margin-top: 14px; display: flex; gap: 10px; }
+
+  #print-btn {
+    padding: 14px 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  #print-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+  #submit-btn {
+    width: 100%;
+    padding: 14px 24px;
+    border-radius: var(--radius-lg);
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-family: 'Titillium Web', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s, background 0.15s;
+    letter-spacing: 0.03em;
+  }
+  #submit-btn:hover { background: var(--accent-hover); }
+  #submit-btn:active { transform: scale(0.99); }
+  #submit-btn:disabled { opacity: 0.35; cursor: not-allowed; background: var(--surface3); color: var(--text3); }
+
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 12px 24px;
+    border-radius: var(--radius-lg);
+    font-size: 13px;
+    font-weight: 500;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 9999;
+    white-space: nowrap;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--success-light); border-color: #065f46; color: var(--success); }
+  .toast.error { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); color: var(--danger); }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 3px;
+    margin-bottom: 10px;
+    width: fit-content;
+  }
+  .mode-btn {
+    padding: 8px 24px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    color: var(--text3);
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mode-btn.active-asennus { background: var(--surface3); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+  .mode-btn.active-tarjous { background: rgba(251,191,36,0.15); color: var(--warning); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+  .mode-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .mode-badge.asennus { background: var(--success-light); color: var(--success); }
+  .mode-badge.tarjous { background: rgba(251,191,36,0.12); color: var(--warning); }
+
+  .piste-select {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .piste-btn {
+    padding: 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.12s;
+  }
+  .piste-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .piste-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .piste-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .piste-btn.disabled::after {
+    content: ' – Ei yhdistetty';
+    font-size: 9px;
+    display: block;
+    color: var(--text3);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+  .piste-test {
+    border-color: #065f46;
+    color: var(--success);
+    background: var(--success-light);
+  }
+  .piste-test:hover { border-color: var(--success); background: rgba(52,211,153,0.15); color: var(--success); }
+  .piste-test.active { box-shadow: 0 0 0 1px var(--success); }
+
+  @media (max-width: 560px) {
+    .col-2, .col-3 { grid-template-columns: 1fr; }
+    .tarvike-header, .tarvike-row { grid-template-columns: 1.5fr 1fr 28px; }
+    .tarvike-header span:nth-child(3), .tarvike-row input:nth-child(3) { display: none; }
+  }
+
+  @media print {
+    body { background: #fff !important; color: #000 !important; padding: 0; }
+    #auth-btn, #theme-btn, .mode-toggle, .submit-area, .toast { display: none !important; }
+    .page-header { border-bottom: 2px solid #cc1717 !important; }
+    .logo-area h1 { color: #000 !important; }
+    .logo-area h1 span { color: #cc1717 !important; }
+    .logo-area p { color: #666 !important; }
+    .logo-windshield { color: #333 !important; }
+    .section { background: #fff !important; border: 1px solid #ccc !important; break-inside: avoid; }
+    .section-title { color: #333 !important; background: #f5f5f5 !important; }
+    .section-title::after { background: #ccc !important; }
+    .field label { color: #555 !important; }
+    .field input, .field select, .field textarea { background: #fff !important; border: 1px solid #ccc !important; color: #000 !important; }
+    .piste-btn, .tyyppi-btn { background: #fff !important; border: 1px solid #ccc !important; color: #333 !important; }
+    .piste-btn.active, .tyyppi-btn.active { background: #fdeaea !important; border-color: #cc1717 !important; color: #cc1717 !important; }
+    .piste-btn.disabled { opacity: 0.3 !important; }
+    .cb-item { background: #fff !important; border: 1px solid #ccc !important; color: #000 !important; }
+    .varaaja-bar { background: #fff !important; border: 1px solid #ccc !important; }
+  }
+
+  /* ── VAHVISTUS MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; animation: overlayIn 0.2s ease; }
+  @keyframes overlayIn { from { opacity:0; } to { opacity:1; } }
+
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 96vh;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    animation: modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    display: flex;
+    flex-direction: column;
+  }
+  @keyframes modalIn {
+    from { opacity:0; transform:scale(0.94) translateY(12px); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .modal-header h2 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Titillium Web', sans-serif;
+  }
+  .modal-close {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s;
+  }
+  .modal-close:hover { background: rgba(248,113,113,0.1); color: var(--danger); border-color: rgba(248,113,113,0.3); }
+
+  .cal-preview {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .conf-header {
+    background: var(--accent-light);
+    border: 2px solid var(--accent);
+    border-left-width: 5px;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+  }
+  .conf-header-title {
+    font-family: 'Titillium Web', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .conf-header-meta { font-size: 12px; color: var(--accent); font-weight: 600; }
+
+  .conf-section { margin-bottom: 7px; }
+  .conf-section-title {
+    font-size: 8px;
+    font-weight: 700;
+    font-family: 'Titillium Web', sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 5px;
+  }
+  .conf-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .conf-row.col2 { grid-template-columns: 1fr 1fr; }
+  .conf-row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+  .conf-cell {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 8px;
+    min-width: 0;
+  }
+  .conf-cell.span2 { grid-column: span 2; }
+  .conf-cell.span3 { grid-column: span 3; }
+  .conf-cell.span4 { grid-column: span 4; }
+  .conf-cell-label {
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    margin-bottom: 1px;
+    font-family: 'Titillium Web', sans-serif;
+  }
+  .conf-cell-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .conf-cell-value.empty { color: var(--text3); font-weight: 400; font-style: italic; font-size: 11px; }
+
+  .modal-actions {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  #modal-confirm-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: var(--radius-lg);
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-family: 'Titillium Web', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+  #modal-confirm-btn:hover { background: var(--accent-hover); }
+  #modal-confirm-btn:active { transform: scale(0.99); }
+  #modal-confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  #modal-edit-btn, #modal-print-btn {
+    padding: 12px 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  #modal-edit-btn:hover, #modal-print-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+  @media print {
+    .modal-overlay:not(.open) { display: none !important; }
+    .modal-overlay.open {
+      position: static !important;
+      background: none !important;
+      backdrop-filter: none !important;
+      padding: 0 !important;
+      display: block !important;
+    }
+    .modal-box {
+      box-shadow: none !important;
+      border: none !important;
+      max-height: none !important;
+      overflow: visible !important;
+      animation: none !important;
+      background: #fff !important;
+      max-width: 100% !important;
+    }
+    .cal-preview { overflow: visible !important; padding: 8px !important; }
+    .modal-actions, .modal-close, .modal-header { display: none !important; }
+    .conf-header { background: #fdeaea !important; border-color: #E50420 !important; }
+    .conf-header-title { color: #111 !important; }
+    .conf-header-meta { color: #E50420 !important; }
+    .conf-cell { background: #f5f5f5 !important; border-color: #ddd !important; }
+    .conf-cell-label { color: #666 !important; }
+    .conf-cell-value { color: #111 !important; }
+    .conf-section-title { color: #666 !important; border-color: #ccc !important; }
+    .form-wrap, .page-header { display: none !important; }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="logo-area">
+    <div class="logo-lockup">
+      <img id="stm-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Suomen Tuulilasimestarit" style="height:52px;width:auto;" />
+      <div>
+        <p id="header-sub" style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.03em;">Asennusvaraus – kalenterilomake</p>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <button id="theme-btn" onclick="toggleTheme()" title="Vaihda teema">
+      <span id="theme-icon">☀️</span>
+    </button>
+    <button id="auth-btn">
+      <span class="auth-dot" id="auth-dot"></span>
+      <span id="auth-label">Kirjaudu Google-tilille</span>
+    </button>
+  </div>
+</div>
+
+<div class="form-wrap">
+
+  <!-- Asennus / Tarjous valinta -->
+  <div style="margin-bottom:12px;">
+    <div class="mode-toggle">
+      <button class="mode-btn active-asennus" id="mode-asennus" onclick="setMode('asennus')">📅 Asennusvaraus</button>
+      <button class="mode-btn" id="mode-tarjous" onclick="setMode('tarjous')">💬 Tarjous</button>
+    </div>
+  </div>
+
+  <!-- Varaaja -->
+  <div class="varaaja-bar">
+    <label>Varaaja</label>
+    <input type="text" id="varaaja" placeholder="Oma nimesi" autocomplete="name" />
+    <span class="saved-tag" id="saved-tag">Tallennettu</span>
+  </div>
+
+  <!-- Asennuspiste -->
+  <div class="section">
+    <div class="section-title">Asennuspiste</div>
+    <div class="piste-select" id="piste-select">
+      <button class="piste-btn disabled" data-piste="Hatanpää" data-cal="">Hatanpää</button>
+      <button class="piste-btn disabled" data-piste="Kuopio" data-cal="">Kuopio</button>
+      <button class="piste-btn disabled" data-piste="Lahti" data-cal="">Lahti</button>
+      <button class="piste-btn disabled" data-piste="Lempäälä" data-cal="">Lempäälä</button>
+      <button class="piste-btn disabled" data-piste="Lielahti" data-cal="">Lielahti</button>
+      <button class="piste-btn disabled" data-piste="Vantaa" data-cal="">Vantaa</button>
+      <button class="piste-btn disabled" data-piste="Ylöjärvi" data-cal="">Ylöjärvi</button>
+      <button class="piste-btn piste-test" data-piste="TEST" data-cal="7d4afd2a7c67181d4963f25ed5b090f2d60786fe4fafbc266be482f3b22ca623@group.calendar.google.com">🧪 TEST</button>
+    </div>
+  </div>
+
+  <!-- Aika ja tyyppi -->
+  <div class="section">
+    <div class="section-title">Aika ja työnimike</div>
+    <div class="row col-2" style="margin-bottom:14px;">
+      <div class="field">
+        <label>Päivämäärä</label>
+        <input type="date" id="paivamaara" />
+      </div>
+      <div class="field">
+        <label>Kellonaika</label>
+        <div style="display:inline-flex;align-items:stretch;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);overflow:hidden;width:fit-content;">
+          <select id="kellonaika-h" aria-label="Tunti" style="font-family:'Manrope',sans-serif;font-size:13px;padding:8px 6px 8px 11px;border:none;background:transparent;color:var(--text);-webkit-appearance:none;appearance:none;cursor:pointer;outline:none;min-width:60px;"></select>
+          <span style="display:inline-flex;align-items:center;padding:0 2px;color:var(--text3);font-weight:700;">:</span>
+          <select id="kellonaika-m" aria-label="Minuutti" style="font-family:'Manrope',sans-serif;font-size:13px;padding:8px 11px 8px 4px;border:none;background:transparent;color:var(--text);-webkit-appearance:none;appearance:none;cursor:pointer;outline:none;min-width:56px;"></select>
+        </div>
+        <input type="hidden" id="kellonaika" value="08:00" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Työnimike</label>
+      <div class="tyyppi-grid" style="margin-top:4px;">
+        <button class="tyyppi-btn active" data-val="Asennus">Asennus</button>
+        <button class="tyyppi-btn" data-val="Korjaus">Korjaus</button>
+        <button class="tyyppi-btn" data-val="Reklamaatio">Reklamaatio</button>
+        <button class="tyyppi-btn" data-val="Muu">Muu</button>
+        <input class="tyyppi-custom" type="text" id="tyyppi-custom" placeholder="Oma nimike..." />
+      </div>
+    </div>
+  </div>
+
+  <!-- Ajoneuvo -->
+  <div class="section">
+    <div class="section-title">Ajoneuvon tiedot</div>
+    <div class="row col-2">
+      <div class="field mono">
+        <label>Rekisterinumero</label>
+        <input type="text" id="rekisteri" placeholder="ABC-123" maxlength="10" />
+      </div>
+      <div class="field">
+        <label>VIN / tunniste</label>
+        <input type="text" id="vin" placeholder="VIN tai muu" />
+      </div>
+    </div>
+    <div class="row col-2">
+      <div class="field">
+        <label>Merkki</label>
+        <input type="text" id="merkki" placeholder="esim. Toyota" />
+      </div>
+      <div class="field">
+        <label>Malli</label>
+        <input type="text" id="malli" placeholder="esim. Corolla" />
+      </div>
+    </div>
+    <div class="field col-last">
+      <label>Autoliike tai yritys</label>
+      <div style="position:relative;">
+        <select id="autoliike-select" style="font-family:'Manrope',sans-serif;font-size:13px;padding:8px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6480' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;width:100%;cursor:pointer;"></select>
+        <input type="text" id="autoliike" placeholder="Kirjoita nimi..." style="display:none;font-family:'Manrope',sans-serif;font-size:13px;padding:8px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);width:100%;" />
+      </div>
+    </div>
+    <div class="field col-last">
+      <label>Viite tai huomautus</label>
+      <input type="text" id="viite" placeholder="Viite, tilausnumero tai huomautus" />
+    </div>
+  </div>
+
+  <!-- Lasi -->
+  <div class="section">
+    <div class="section-title">Lasi</div>
+    <div class="row col-3">
+      <div class="field">
+        <label>Eurokoodi</label>
+        <input type="text" id="eurokoodi" placeholder="AGC12345" />
+      </div>
+      <div class="field">
+        <label>Varastopaikka</label>
+        <input type="text" id="lasi-varasto" placeholder="Hylly / paikka" />
+      </div>
+      <div class="field">
+        <label>Toimittaja (tilaustuote)</label>
+        <div style="position:relative;">
+          <select id="lasi-toimittaja-select" style="font-family:'Manrope',sans-serif;font-size:13px;padding:8px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6480' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;width:100%;cursor:pointer;"></select>
+          <input type="text" id="lasi-toimittaja" placeholder="Kirjoita toimittaja..." style="display:none;font-family:'Manrope',sans-serif;font-size:13px;padding:8px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);width:100%;" />
+        </div>
+      </div>
+    </div>
+    <div class="row col-2 col-last">
+      <div class="field">
+        <label>Arvioitu lasin toimituspäivä</label>
+        <input type="date" id="lasi-toimituspvm" />
+      </div>
+      <div class="field">
+        <label>Selite</label>
+        <input type="text" id="lasi-selite" placeholder="Lisätietoja lasista..." />
+      </div>
+    </div>
+  </div>
+
+  <!-- Asiakas -->
+  <div class="section">
+    <div class="section-title">Asiakkaan tiedot</div>
+    <div class="row col-2">
+      <div class="field">
+        <label>Etunimi</label>
+        <input type="text" id="etunimi" placeholder="Etunimi" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>Sukunimi</label>
+        <input type="text" id="sukunimi" placeholder="Sukunimi" autocomplete="off" />
+      </div>
+    </div>
+    <div class="row col-2">
+      <div class="field">
+        <label>Puhelin</label>
+        <input type="tel" id="puhelin" placeholder="+358 40 000 0000" />
+      </div>
+      <div class="field">
+        <label>Sähköposti</label>
+        <input type="email" id="email" placeholder="asiakas@email.fi" />
+      </div>
+    </div>
+    <div class="row col-2">
+      <div class="field">
+        <label>Katuosoite</label>
+        <input type="text" id="osoite" placeholder="Esimerkkikatu 1" />
+      </div>
+      <div class="field" style="display:grid; grid-template-columns:1fr 2fr; gap:8px;">
+        <div class="field">
+          <label>Postinumero</label>
+          <input type="text" id="postinro" placeholder="00100" maxlength="6" />
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:6px;">Kaupunki <span id="postinro-updated" style="font-size:9px;color:var(--text3);font-weight:400;"></span></label>
+          <input type="text" id="kaupunki" placeholder="Helsinki" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tarvikkeet -->
+  <div class="section">
+    <div class="section-title">Tarvikkeet</div>
+    <div class="tarvike-header">
+      <span>Nimike</span>
+      <span>Varastopaikka</span>
+      <span>Toimittaja</span>
+      <span></span>
+    </div>
+    <div id="tarvike-list"></div>
+    <button class="add-row-btn" id="add-tarvike">+ Lisää tarvike</button>
+  </div>
+
+  <!-- Vakuutus -->
+  <div class="section">
+    <div class="section-title">Vakuutus ja vahinko</div>
+    <div class="field">
+      <label>Vakuutusyhtiö</label>
+      <select id="vakuutus">
+        <option value="">— Ei vakuutusta / valitse —</option>
+        <option value="Ei vakuutusta">Ei vakuutusta</option>
+        <option disabled>──────────────</option>
+        <option value="If">If</option>
+        <option value="LähiTapiola">LähiTapiola</option>
+        <option value="Pohjola">Pohjola</option>
+        <option value="Fennia">Fennia</option>
+        <option value="Turva">Turva</option>
+        <option value="Folksam">Folksam</option>
+        <option value="POP Vakuutus">POP Vakuutus</option>
+        <option value="Protector">Protector</option>
+        <option value="Tryg">Tryg</option>
+        <option value="Alandia">Alandia</option>
+        <option value="Muu">Muu</option>
+      </select>
+    </div>
+    <div class="vakuutus-extra hidden" id="vakuutus-extra">
+      <div class="row col-2" style="margin-top:12px;">
+        <div class="field">
+          <label>Vahinkopäivä</label>
+          <input type="date" id="vahinkopv" />
+        </div>
+        <div class="field">
+          <label>Vahinkotunnus</label>
+          <input type="text" id="vahinkotunnus" placeholder="Vahingon numero" />
+        </div>
+      </div>
+      <div class="row col-2" style="align-items:flex-end;">
+        <div class="field">
+          <label>Omavastuun määrä (€)</label>
+          <div style="position:relative;max-width:220px;">
+            <select id="omavastuu-select" style="font-family:'Manrope',sans-serif;font-size:13px;padding:8px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6480' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;width:100%;cursor:pointer;">
+              <option value="">— Valitse omavastuu —</option>
+            </select>
+            <input type="text" inputmode="numeric" id="omavastuu" style="display:none;" /></div>
+        </div>
+        <div class="field" id="vakuutus-tarkistettu-wrap">
+          <label style="margin-bottom:8px;">Vakuutus tarkistettu <span style="color:var(--danger,#e53);">*</span></label>
+          <div style="display:flex; gap:8px;">
+            <label class="cb-item" style="display:inline-flex;">
+              <input type="radio" name="vakuutus-tarkistettu" id="vak-tark-k" value="K" />
+              <span class="cb-box"></span>
+              <span>K</span>
+            </label>
+            <label class="cb-item" style="display:inline-flex;">
+              <input type="radio" name="vakuutus-tarkistettu" id="vak-tark-e" value="E" />
+              <span class="cb-box"></span>
+              <span>E</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>Huomioita vakuutuksesta</label>
+        <textarea id="vakuutus-huomioita" placeholder="Vapaamuotoiset huomiot..." rows="2"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hinta ja lisäpalvelut -->
+  <div class="section">
+    <div class="section-title">Hinta ja lisäpalvelut</div>
+    <div class="field" style="max-width:200px; margin-bottom:16px;">
+      <label>Hinta (€)</label>
+      <input type="text" id="hinta" placeholder="0,00" inputmode="decimal" />
+    </div>
+    <div class="field">
+      <label style="margin-bottom:8px;">Lisäpalvelut</label>
+      <div class="checkbox-group">
+        <label class="cb-item">
+          <input type="checkbox" id="cb-pinnoitus" />
+          <span class="cb-box"></span>
+          <span>Pinnoitus</span>
+        </label>
+        <label class="cb-item">
+          <input type="checkbox" id="cb-sulat" />
+          <span class="cb-box"></span>
+          <span>Sulat</span>
+        </label>
+        <label class="cb-item">
+          <input type="checkbox" id="cb-sijaisauto" />
+          <span class="cb-box"></span>
+          <span>Sijaisauto</span>
+        </label>
+      </div>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>Lisätiedot / muistiinpanot</label>
+      <textarea id="lisatiedot" placeholder="Vapaamuotoiset lisätiedot..."></textarea>
+    </div>
+  </div>
+
+  <div class="submit-area">
+    <button id="submit-btn" disabled>Kirjaudu ensin Google-tilille</button>
+    <button id="print-btn" onclick="window.print()">🖨️ Tulosta lomake</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── VAHVISTUS MODAL ── -->
+<div class="modal-overlay" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box" id="modal-box">
+    <div class="modal-header">
+      <h2 id="modal-title">
+        <span id="modal-title-icon">📅</span>
+        <span id="modal-title-text">Vahvista kalenterivaraus</span>
+      </h2>
+      <button class="modal-close" id="modal-close-btn" title="Sulje">✕</button>
+    </div>
+    <div class="cal-preview" id="modal-preview-content"></div>
+    <div class="modal-actions">
+      <button id="modal-confirm-btn">✅ Vahvista varaus</button>
+      <button id="modal-edit-btn">✏️ Muuta varausta</button>
+      <button id="modal-print-btn">🖨️ Tulosta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Google Identity & Calendar API -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ============================================================
+// ASETUKSET – täytä nämä ennen käyttöönottoa
+// ============================================================
+const CLIENT_ID = '407173392975-daujo79fag2g1si9spljnv6vkct5ccqj.apps.googleusercontent.com';
+// TEST ajanvaraus -kalenteri testausta varten
+const TESTI_CAL = '7d4afd2a7c67181d4963f25ed5b090f2d60786fe4fafbc266be482f3b22ca623@group.calendar.google.com';
+const CALENDAR_IDS = {
+  'Hatanpää':  TESTI_CAL,
+  'Kuopio':    TESTI_CAL,
+  'Lahti':     TESTI_CAL,
+  'Lempäälä':  TESTI_CAL,
+  'Lielahti':  TESTI_CAL,
+  'Vantaa':    TESTI_CAL,
+  'Ylöjärvi':  TESTI_CAL,
+};
+const TARJOUS_CALENDAR_ID = TESTI_CAL;
+// ============================================================
+
+const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file';
+const DRIVE_TARRAT_FOLDER = '1SudYQqrPjP-urY1sPNJzpfnHJnXiLXpG';
+let accessToken = null;
+let selectedPiste = null;
+let activeTyyppiBtn = document.querySelector('.tyyppi-btn.active');
+let tarvikeCnt = 0;
+let currentMode = 'asennus'; // 'asennus' tai 'tarjous'
+
+function setMode(mode) {
+  currentMode = mode;
+  const btnA = document.getElementById('mode-asennus');
+  const btnT = document.getElementById('mode-tarjous');
+  const sub = document.getElementById('header-sub');
+  const submitBtn = document.getElementById('submit-btn');
+  btnA.className = 'mode-btn' + (mode === 'asennus' ? ' active-asennus' : '');
+  btnT.className = 'mode-btn' + (mode === 'tarjous' ? ' active-tarjous' : '');
+  if (mode === 'tarjous') {
+    sub.innerHTML = 'Tarjouslomake <span class="mode-badge tarjous">Tarjous</span>';
+    if (accessToken) submitBtn.textContent = 'Tallenna tarjous kalenteriin →';
+  } else {
+    sub.innerHTML = 'Asennusvaraus – kalenterilomake';
+    if (accessToken) submitBtn.textContent = 'Luo kalenterivaraus →';
+  }
+}
+
+// --- Varaajan nimi muistiin ---
+const varaaja = document.getElementById('varaaja');
+const savedTag = document.getElementById('saved-tag');
+const stored = localStorage.getItem('stm_varaaja');
+if (stored) varaaja.value = stored;
+let saveTimer;
+varaaja.addEventListener('input', () => {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    localStorage.setItem('stm_varaaja', varaaja.value);
+    savedTag.style.opacity = '1';
+    setTimeout(() => savedTag.style.opacity = '0', 1800);
+  }, 700);
+});
+
+// --- Omavastuu muisti ---
+let omavastuuHistory = [];
+try { omavastuuHistory = JSON.parse(localStorage.getItem('stm_omavastuu') || '[]'); } catch(e) {}
+
+function renderOmavastuuSelect(keepValue) {
+  const sel = document.getElementById('omavastuu-select');
+  const cur = keepValue !== undefined ? keepValue : sel.value;
+  const hasHistory = omavastuuHistory.length > 0;
+  sel.innerHTML = '';
+
+  // Oletusasetus
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = hasHistory ? '— Valitse omavastuu —' : '— Anna omavastuu —';
+  sel.appendChild(defaultOpt);
+
+  // 0 € aina ensimmäisenä vakiovaihtoehtona
+  const zeroOpt = document.createElement('option');
+  zeroOpt.value = '0';
+  zeroOpt.textContent = '0 € (ei omavastuuta)';
+  if (String(cur) === '0') zeroOpt.selected = true;
+  sel.appendChild(zeroOpt);
+
+  // Historia-vaihtoehdot (ei 0:aa uudelleen)
+  omavastuuHistory.filter(v => v !== 0).forEach(v => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = v + ' €';
+    if (String(v) === String(cur)) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  // Erottaja
+  const sep = document.createElement('option');
+  sep.disabled = true;
+  sep.textContent = '──────────────';
+  sel.appendChild(sep);
+
+  // Muu summa
+  const muuOpt = document.createElement('option');
+  muuOpt.value = '__muu__';
+  muuOpt.textContent = 'Muu summa...';
+  sel.appendChild(muuOpt);
+
+  // Poista vaihtoehto (vain jos on historiaa)
+  if (omavastuuHistory.filter(v => v !== 0).length > 0) {
+    const poistaOpt = document.createElement('option');
+    poistaOpt.value = '__poista__';
+    poistaOpt.textContent = '🗑 Poista tallennettu summa...';
+    sel.appendChild(poistaOpt);
+  }
+
+  // Synkronoi piilotettu input
+  if (cur !== undefined && cur !== '' && cur !== '__muu__' && cur !== '__poista__') {
+    document.getElementById('omavastuu').value = cur;
+  }
+}
+renderOmavastuuSelect();
+
+document.getElementById('omavastuu-select').addEventListener('change', function() {
+  const input = document.getElementById('omavastuu');
+  if (this.value === '__muu__') {
+    // Näytä tekstikenttä
+    this.style.display = 'none';
+    input.style.display = 'block';
+    input.style.cssText = 'font-family:Manrope,sans-serif;font-size:13px;padding:8px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);width:100%;';
+    input.value = '';
+    input.placeholder = 'Kirjoita summa €';
+    input.focus();
+  } else if (this.value === '__poista__') {
+    // Näytä poistovalinta
+    const history = omavastuuHistory.filter(v => v !== 0);
+    const opts = history.map(v => `${v} €`).join('\n');
+    const valinta = prompt(`Kirjoita poistettava summa:\n${opts}`);
+    const poistettava = parseInt(valinta);
+    if (!isNaN(poistettava)) {
+      const counts = JSON.parse(localStorage.getItem('stm_omavastuu_counts') || '{}');
+      delete counts[poistettava];
+      localStorage.setItem('stm_omavastuu_counts', JSON.stringify(counts));
+      omavastuuHistory = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(e => parseInt(e[0]));
+      localStorage.setItem('stm_omavastuu', JSON.stringify(omavastuuHistory));
+      renderOmavastuuSelect('');
+      showToast(`Poistettu: ${poistettava} €`, '');
+    } else {
+      renderOmavastuuSelect('');
+    }
+  } else {
+    input.value = this.value;
+  }
+});
+
+document.getElementById('omavastuu').addEventListener('blur', function() {
+  const v = parseInt(this.value);
+  const sel = document.getElementById('omavastuu-select');
+  if (!v || v <= 0) {
+    // Palaa selectiin tyhjänä
+    this.style.display = 'none';
+    sel.style.display = 'block';
+    sel.value = '';
+    return;
+  }
+  // Tallenna historiaan
+  const counts = JSON.parse(localStorage.getItem('stm_omavastuu_counts') || '{}');
+  counts[v] = (counts[v] || 0) + 1;
+  localStorage.setItem('stm_omavastuu_counts', JSON.stringify(counts));
+  omavastuuHistory = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(e => parseInt(e[0]));
+  localStorage.setItem('stm_omavastuu', JSON.stringify(omavastuuHistory));
+  // Palaa selectiin valittuna arvona
+  this.style.display = 'none';
+  sel.style.display = 'block';
+  renderOmavastuuSelect(v);
+});
+
+// --- Autoliike muisti (top 10) ---
+let autoliekeHistory = [];
+let autoliekeeCounts = {};
+try {
+  autoliekeHistory = JSON.parse(localStorage.getItem('stm_autoliike') || '[]');
+  autoliekeeCounts = JSON.parse(localStorage.getItem('stm_autoliike_counts') || '{}');
+} catch(e) {}
+
+function renderAutoliikkeeSelect(keepValue) {
+  const sel = document.getElementById('autoliike-select');
+  const cur = keepValue !== undefined ? keepValue : '';
+  sel.innerHTML = '';
+
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = autoliekeHistory.length > 0 ? '— Valitse autoliike —' : '— Anna autoliike —';
+  sel.appendChild(defaultOpt);
+
+  autoliekeHistory.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = v;
+    if (v === cur) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  const sep = document.createElement('option');
+  sep.disabled = true;
+  sep.textContent = '──────────────';
+  sel.appendChild(sep);
+
+  const uusiOpt = document.createElement('option');
+  uusiOpt.value = '__uusi__';
+  uusiOpt.textContent = 'Uusi autoliike...';
+  sel.appendChild(uusiOpt);
+
+  if (autoliekeHistory.length > 0) {
+    const poistaOpt = document.createElement('option');
+    poistaOpt.value = '__poista__';
+    poistaOpt.textContent = '🗑 Poista autoliike...';
+    sel.appendChild(poistaOpt);
+  }
+}
+renderAutoliikkeeSelect();
+
+document.getElementById('autoliike-select').addEventListener('change', function() {
+  const input = document.getElementById('autoliike');
+  if (this.value === '__uusi__') {
+    this.style.display = 'none';
+    input.style.display = 'block';
+    input.value = '';
+    input.focus();
+  } else if (this.value === '__poista__') {
+    const opts = autoliekeHistory.join('\n');
+    const valinta = prompt(`Kirjoita poistettava autoliike:\n${opts}`);
+    if (valinta && autoliekeHistory.includes(valinta.trim())) {
+      const poistettu = valinta.trim();
+      delete autoliekeeCounts[poistettu];
+      localStorage.setItem('stm_autoliike_counts', JSON.stringify(autoliekeeCounts));
+      autoliekeHistory = Object.entries(autoliekeeCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(e => e[0]);
+      localStorage.setItem('stm_autoliike', JSON.stringify(autoliekeHistory));
+      renderAutoliikkeeSelect('');
+      showToast(`Poistettu: ${poistettu}`, '');
+    } else {
+      renderAutoliikkeeSelect('');
+    }
+  }
+  // Muussa tapauksessa valittu arvo jää selectiin
+});
+
+document.getElementById('autoliike').addEventListener('blur', function() {
+  const v = this.value.trim();
+  const sel = document.getElementById('autoliike-select');
+  this.style.display = 'none';
+  sel.style.display = 'block';
+  if (!v) { renderAutoliikkeeSelect(''); return; }
+  // Tallenna
+  autoliekeeCounts[v] = (autoliekeeCounts[v] || 0) + 1;
+  localStorage.setItem('stm_autoliike_counts', JSON.stringify(autoliekeeCounts));
+  autoliekeHistory = Object.entries(autoliekeeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(e => e[0]);
+  localStorage.setItem('stm_autoliike', JSON.stringify(autoliekeHistory));
+  renderAutoliikkeeSelect(v);
+});
+
+// --- Toimittaja muisti (jaettu: Lasi + Tarvikkeet, top 10) ---
+let toimittajaHistory = [];
+let toimittajaCounts = {};
+try {
+  toimittajaHistory = JSON.parse(localStorage.getItem('stm_toimittaja') || '[]');
+  toimittajaCounts = JSON.parse(localStorage.getItem('stm_toimittaja_counts') || '{}');
+} catch(e) {}
+
+function saveToimittaja(v) {
+  if (!v) return;
+  toimittajaCounts[v] = (toimittajaCounts[v] || 0) + 1;
+  localStorage.setItem('stm_toimittaja_counts', JSON.stringify(toimittajaCounts));
+  toimittajaHistory = Object.entries(toimittajaCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(e => e[0]);
+  localStorage.setItem('stm_toimittaja', JSON.stringify(toimittajaHistory));
+}
+
+function buildToimittajaSelect(sel, keepValue) {
+  const cur = keepValue !== undefined ? keepValue : '';
+  sel.innerHTML = '';
+  const def = document.createElement('option');
+  def.value = '';
+  def.textContent = toimittajaHistory.length > 0 ? '— Valitse toimittaja —' : '— Anna toimittaja —';
+  sel.appendChild(def);
+  toimittajaHistory.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    if (v === cur) o.selected = true;
+    sel.appendChild(o);
+  });
+  const sep = document.createElement('option');
+  sep.disabled = true; sep.textContent = '──────────────';
+  sel.appendChild(sep);
+  const uusi = document.createElement('option');
+  uusi.value = '__uusi__'; uusi.textContent = 'Uusi toimittaja...';
+  sel.appendChild(uusi);
+  if (toimittajaHistory.length > 0) {
+    const poista = document.createElement('option');
+    poista.value = '__poista__'; poista.textContent = '🗑 Poista toimittaja...';
+    sel.appendChild(poista);
+  }
+}
+
+function initToimittajaSelect(sel, inp) {
+  buildToimittajaSelect(sel);
+  sel.addEventListener('change', function() {
+    if (this.value === '__uusi__') {
+      this.style.display = 'none';
+      inp.style.display = 'block';
+      inp.value = ''; inp.focus();
+    } else if (this.value === '__poista__') {
+      const opts = toimittajaHistory.join('\n');
+      const valinta = prompt(`Kirjoita poistettava toimittaja:\n${opts}`);
+      if (valinta && toimittajaHistory.includes(valinta.trim())) {
+        const p = valinta.trim();
+        delete toimittajaCounts[p];
+        localStorage.setItem('stm_toimittaja_counts', JSON.stringify(toimittajaCounts));
+        toimittajaHistory = Object.entries(toimittajaCounts)
+          .sort((a, b) => b[1] - a[1]).slice(0, 10).map(e => e[0]);
+        localStorage.setItem('stm_toimittaja', JSON.stringify(toimittajaHistory));
+        // Päivitä kaikki toimittaja-selectit
+        refreshAllToimittajaSelects();
+        showToast(`Poistettu: ${p}`, '');
+      } else { buildToimittajaSelect(this, ''); this.value = ''; }
+    }
+  });
+  inp.addEventListener('blur', function() {
+    const v = this.value.trim();
+    this.style.display = 'none';
+    sel.style.display = 'block';
+    if (!v) { buildToimittajaSelect(sel, ''); return; }
+    saveToimittaja(v);
+    refreshAllToimittajaSelects(v, sel);
+  });
+}
+
+function refreshAllToimittajaSelects(keepVal, activeSel) {
+  // Lasi-toimittaja
+  const lasiSel = document.getElementById('lasi-toimittaja-select');
+  if (lasiSel) buildToimittajaSelect(lasiSel, lasiSel === activeSel ? keepVal : lasiSel.value);
+  // Tarvike-toimittajat
+  document.querySelectorAll('.tarvike-toimittaja-select').forEach(s => {
+    buildToimittajaSelect(s, s === activeSel ? keepVal : s.value);
+  });
+}
+
+// Init lasi-toimittaja
+initToimittajaSelect(
+  document.getElementById('lasi-toimittaja-select'),
+  document.getElementById('lasi-toimittaja')
+);
+const vakuutusSelect = document.getElementById('vakuutus');
+const vakuutusExtra = document.getElementById('vakuutus-extra');
+let vakuutusOrder = [];
+try { vakuutusOrder = JSON.parse(localStorage.getItem('stm_vakuutus') || '[]'); } catch(e) {}
+
+function renderVakuutus(selected) {
+  const all = ['If','LähiTapiola','Pohjola','Fennia','Turva','Folksam','POP Vakuutus','Protector','Tryg','Alandia','Muu'];
+  const ordered = [...vakuutusOrder, ...all.filter(v => !vakuutusOrder.includes(v))];
+  const cur = selected !== undefined ? selected : vakuutusSelect.value;
+  vakuutusSelect.innerHTML = '<option value="">— Ei vakuutusta / valitse —</option><option value="Ei vakuutusta">Ei vakuutusta</option><option disabled>──────────────</option>';
+  ordered.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    if (v === cur) o.selected = true;
+    vakuutusSelect.appendChild(o);
+  });
+}
+renderVakuutus('');
+
+vakuutusSelect.addEventListener('change', () => {
+  const val = vakuutusSelect.value;
+  if (val && val !== 'Ei vakuutusta' && val !== '') {
+    vakuutusExtra.classList.remove('hidden');
+    vakuutusOrder = [val, ...vakuutusOrder.filter(v => v !== val)].slice(0, 6);
+    localStorage.setItem('stm_vakuutus', JSON.stringify(vakuutusOrder));
+    renderVakuutus(val);
+  } else {
+    vakuutusExtra.classList.add('hidden');
+    document.querySelectorAll('input[name="vakuutus-tarkistettu"]').forEach(r => r.checked = false);
+  }
+});
+
+// --- Asennuspiste ---
+document.querySelectorAll('.piste-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.classList.contains('disabled')) return;
+    document.querySelectorAll('.piste-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedPiste = btn.dataset.piste;
+  });
+});
+
+// --- Työnimike ---
+const tyyppiCustom = document.getElementById('tyyppi-custom');
+document.querySelectorAll('.tyyppi-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tyyppi-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTyyppiBtn = btn;
+    tyyppiCustom.value = '';
+  });
+});
+tyyptiCustom_inputHandler = () => {
+  if (tyyppiCustom.value.trim()) {
+    document.querySelectorAll('.tyyppi-btn').forEach(b => b.classList.remove('active'));
+    activeTyyppiBtn = null;
+  }
+};
+tyyppiCustom.addEventListener('input', tyyptiCustom_inputHandler);
+
+// --- Rekisteri isoin ---
+// --- Päivämäärävalitsin avautuu automaattisesti, Enter hyväksyy ---
+['paivamaara', 'lasi-toimituspvm', 'vahinkopv'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const openPicker = function() {
+    try { this.showPicker(); } catch(e) {}
+  };
+  el.addEventListener('focus', openPicker);
+  el.addEventListener('click', openPicker);
+  el.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.blur();
+      // Siirry seuraavaan kenttään
+      const focusable = Array.from(document.querySelectorAll(
+        'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+      ));
+      const idx = focusable.indexOf(this);
+      if (idx >= 0 && focusable[idx + 1]) focusable[idx + 1].focus();
+    }
+  });
+});
+
+// --- Kellonaika: tunti + minuutti selectit ---
+(function() {
+  const hSel = document.getElementById('kellonaika-h');
+  const mSel = document.getElementById('kellonaika-m');
+  const hidden = document.getElementById('kellonaika');
+  for (let h = 0; h < 24; h++) {
+    const v = String(h).padStart(2, '0');
+    hSel.innerHTML += `<option value="${v}">${v}</option>`;
+  }
+  for (let m = 0; m < 60; m += 10) {
+    const v = String(m).padStart(2, '0');
+    mSel.innerHTML += `<option value="${v}">${v}</option>`;
+  }
+  hSel.value = '08';
+  mSel.value = '00';
+  hidden.value = '08:00';
+  function sync() { hidden.value = hSel.value + ':' + mSel.value; }
+  hSel.addEventListener('change', sync);
+  mSel.addEventListener('change', sync);
+})();
+
+document.getElementById('rekisteri').addEventListener('input', function() {
+  const pos = this.selectionStart;
+  this.value = this.value.toUpperCase();
+  this.setSelectionRange(pos, pos);
+});
+document.getElementById('eurokoodi').addEventListener('input', function() {
+  const pos = this.selectionStart;
+  this.value = this.value.toUpperCase();
+  this.setSelectionRange(pos, pos);
+});
+
+// --- Hinta: 2 desimaalia ---
+document.getElementById('hinta').addEventListener('blur', function() {
+  const raw = this.value.replace(',', '.').trim();
+  const num = parseFloat(raw);
+  if (!isNaN(num)) this.value = num.toFixed(2).replace('.', ',');
+});
+document.getElementById('hinta').addEventListener('keypress', function(e) {
+  if (!/[\d,.]/.test(e.key)) e.preventDefault();
+});
+
+// --- Postinumero → kaupunki automaattitäyttö ---
+let postinroMap = null;
+async function loadPostinroMap() {
+  if (postinroMap) return postinroMap;
+  try {
+    // jsDelivr CDN välittää GitHub-tiedostot CORS-turvallisesti
+    const [mapResp, dateResp] = await Promise.all([
+      fetch('https://cdn.jsdelivr.net/gh/theikkila/postinumerot@master/postcode_map_light.json'),
+      fetch('https://cdn.jsdelivr.net/gh/theikkila/postinumerot@master/LAST_UPDATED')
+    ]);
+    postinroMap = await mapResp.json();
+    if (dateResp.ok) {
+      const dateStr = (await dateResp.text()).trim();
+      const el = document.getElementById('postinro-updated');
+      if (el) {
+        const paiva = dateStr.split('T')[0];
+        const [v, k, p] = paiva.split('-');
+        el.textContent = '· Päivitetty ' + p + '.' + k + '.' + v;
+      }
+    }
+  } catch(e) { postinroMap = {}; }
+  return postinroMap;
+}
+loadPostinroMap();
+
+let postinroTimer;
+document.getElementById('postinro').addEventListener('input', function() {
+  const pnro = this.value.trim();
+  clearTimeout(postinroTimer);
+  if (pnro.length < 5) return;
+  postinroTimer = setTimeout(async () => {
+    const map = await loadPostinroMap();
+    const kaupunki = map[pnro];
+    if (kaupunki) {
+      const kentta = document.getElementById('kaupunki');
+      kentta.value = kaupunki;
+      kentta.style.borderColor = 'var(--success)';
+      setTimeout(() => kentta.style.borderColor = '', 1500);
+    }
+  }, 300);
+});
+
+// --- Tarvikkeet ---
+function addTarvike(n, v, t) {
+  tarvikeCnt++;
+  const id = tarvikeCnt;
+  const row = document.createElement('div');
+  row.className = 'tarvike-row';
+  row.id = 'tr-' + id;
+  row.innerHTML = `
+    <input type="text" placeholder="Tarvikkeen nimi" value="${n||''}" />
+    <input type="text" placeholder="Varastopaikka" value="${v||''}" />
+    <div style="position:relative;">
+      <select class="tarvike-toimittaja-select" style="font-family:'Manrope',sans-serif;font-size:12px;padding:7px 28px 7px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6480' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;width:100%;cursor:pointer;"></select>
+      <input type="text" class="tarvike-toimittaja-input" placeholder="Kirjoita toimittaja..." value="${t||''}" style="display:none;font-family:'Manrope',sans-serif;font-size:12px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);width:100%;" />
+    </div>
+    <button class="rm-btn" onclick="document.getElementById('tr-${id}').remove()">×</button>
+  `;
+  document.getElementById('tarvike-list').appendChild(row);
+  // Init toimittaja-select tälle riville
+  const tSel = row.querySelector('.tarvike-toimittaja-select');
+  const tInp = row.querySelector('.tarvike-toimittaja-input');
+  buildToimittajaSelect(tSel, t || '');
+  if (t) tSel.value = t;
+  initToimittajaSelect(tSel, tInp);
+}
+document.getElementById('add-tarvike').addEventListener('click', () => addTarvike());
+addTarvike();
+
+// --- SIMULAATIO-TILA (ei oikeaa Client ID:tä) ---
+// Kirjautuminen ja kalenterilähetys simuloidaan. Vaihda DEMO_MODE = false
+// kun oikea Client ID on käytössä.
+const DEMO_MODE = false;
+
+function initGoogleAuth() {
+  const authBtn = document.getElementById('auth-btn');
+  const authDot = document.getElementById('auth-dot');
+  const authLabel = document.getElementById('auth-label');
+  const submitBtn = document.getElementById('submit-btn');
+
+  if (DEMO_MODE) {
+    authLabel.textContent = '🧪 Simulaatiotila – kirjaudu';
+    authBtn.addEventListener('click', () => {
+      if (!accessToken) {
+        // Simuloi kirjautuminen
+        accessToken = 'DEMO_TOKEN';
+        authBtn.classList.add('signed-in');
+        authDot.classList.add('green');
+        authLabel.textContent = '🧪 Simulaatio – kirjautunut';
+        submitBtn.disabled = false;
+        submitBtn.textContent = currentMode === 'tarjous' ? 'Tallenna tarjous kalenteriin →' : 'Luo kalenterivaraus →';
+        showToast('Simulaatiotila aktiivinen – varaukset näytetään esikatseluna', '');
+      } else {
+        accessToken = null;
+        authBtn.classList.remove('signed-in');
+        authDot.classList.remove('green');
+        authLabel.textContent = '🧪 Simulaatiotila – kirjaudu';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Kirjaudu ensin Google-tilille';
+      }
+    });
+  } else {
+    // --- Oikea Google OAuth2 (käytössä kun DEMO_MODE = false) ---
+    if (!window.google) { setTimeout(initGoogleAuth, 500); return; }
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: (resp) => {
+        if (resp.error) { showToast('Kirjautuminen epäonnistui: ' + resp.error, 'error'); return; }
+        accessToken = resp.access_token;
+        authBtn.classList.add('signed-in');
+        authDot.classList.add('green');
+        authLabel.textContent = 'Google-tili yhdistetty';
+        submitBtn.disabled = false;
+        submitBtn.textContent = currentMode === 'tarjous' ? 'Tallenna tarjous kalenteriin →' : 'Luo kalenterivaraus →';
+      }
+    });
+    authBtn.addEventListener('click', () => {
+      if (!accessToken) tokenClient.requestAccessToken({ prompt: 'consent' });
+      else {
+        accessToken = null;
+        authBtn.classList.remove('signed-in');
+        authDot.classList.remove('green');
+        authLabel.textContent = 'Kirjaudu Google-tilille';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Kirjaudu ensin Google-tilille';
+      }
+    });
+  }
+}
+initGoogleAuth();
+
+// --- Modal logic ---
+let pendingEventData = null; // { event, calId, isTarjous }
+
+function openConfirmModal(event, calId, isTarjous, piste) {
+  pendingEventData = { event, calId, isTarjous, piste };
+
+  // Otsikko
+  const titleIcon = document.getElementById('modal-title-icon');
+  const titleText = document.getElementById('modal-title-text');
+  titleIcon.textContent = isTarjous ? '💬' : '📅';
+  titleText.textContent = isTarjous ? 'Vahvista tarjouksen tallennus' : 'Vahvista kalenterivaraus';
+
+  // Napin teksti ja nollaa disabled-tila
+  const confirmBtn = document.getElementById('modal-confirm-btn');
+  confirmBtn.textContent = isTarjous ? '✅ Vahvista tarjous' : '✅ Vahvista varaus';
+  confirmBtn.disabled = false;
+
+  // Preview-sisältö
+  const container = document.getElementById('modal-preview-content');
+  const startDt = new Date(event.start.dateTime);
+  const endDt = new Date(event.end.dateTime);
+  const dateStr = startDt.toLocaleDateString('fi-FI', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = startDt.toLocaleTimeString('fi-FI', { timeStyle: 'short' }) + ' – ' + endDt.toLocaleTimeString('fi-FI', { timeStyle: 'short' });
+
+  const vak = val('vakuutus');
+  const osoiteRivi = [val('osoite'), val('postinro'), val('kaupunki')].filter(Boolean).join(', ');
+  const cb = [];
+  if (document.getElementById('cb-pinnoitus').checked) cb.push('Pinnoitus');
+  if (document.getElementById('cb-sulat').checked) cb.push('Sulat');
+  if (document.getElementById('cb-sijaisauto').checked) cb.push('Sijaisauto');
+
+  function cell(label, value, span) {
+    const empty = !value;
+    return `<div class="conf-cell${span ? ' span'+span : ''}">
+      <div class="conf-cell-label">${label}</div>
+      <div class="conf-cell-value${empty?' empty':''}" title="${empty?'':value}">${empty?'—':value}</div>
+    </div>`;
+  }
+
+  const asiakas = [val('etunimi'), val('sukunimi')].filter(Boolean).join(' ');
+  const ajoneuvo = [val('merkki'), val('malli')].filter(Boolean).join(' ');
+  const osoite = [val('osoite'), val('postinro'), val('kaupunki')].filter(Boolean).join(', ');
+  const vakTark = document.querySelector('input[name="vakuutus-tarkistettu"]:checked');
+  const vakStr = [vak, val('vahinkotunnus') ? 'Vahinko: '+val('vahinkotunnus') : '', vakTark ? 'Tark: '+vakTark.value : ''].filter(Boolean).join(' · ');
+  const tarvikkeet = [];
+  document.querySelectorAll('.tarvike-row').forEach(row => {
+    const ins = row.querySelectorAll('input[type="text"]');
+    const tSel = row.querySelector('.tarvike-toimittaja-select');
+    const tInp = row.querySelector('.tarvike-toimittaja-input');
+    const toim = (tInp && tInp.style.display !== 'none') ? tInp.value.trim() : (tSel && tSel.value && tSel.value !== '__uusi__' ? tSel.value : '');
+    if (ins[0] && ins[0].value.trim()) tarvikkeet.push(ins[0].value + (toim ? ' / '+toim : ''));
+  });
+
+  container.innerHTML = `
+    <div class="conf-header">
+      <div class="conf-header-title">${event.summary}</div>
+      <div class="conf-header-meta">📅 ${dateStr} · ${timeStr} · ${piste}</div>
+    </div>
+
+    <div class="conf-section">
+      <div class="conf-section-title">🚗 Ajoneuvo</div>
+      <div class="conf-row">
+        ${cell('Rekisteri', val('rekisteri'))}
+        ${cell('VIN', val('vin'))}
+        ${cell('Merkki', val('merkki'))}
+        ${cell('Malli', val('malli'))}
+      </div>
+    </div>
+
+    <div class="conf-section">
+      <div class="conf-section-title">👤 Asiakas</div>
+      <div class="conf-row">
+        ${cell('Nimi', asiakas, 2)}
+        ${cell('Puhelin', val('puhelin'))}
+        ${cell('Sähköposti', val('email'))}
+      </div>
+      <div class="conf-row col3">
+        ${val('autoliike') ? cell('Autoliike', val('autoliike')) : ''}
+        ${osoite ? cell('Osoite', osoite, 2) : ''}
+        ${val('viite') ? cell('Viite', val('viite')) : ''}
+      </div>
+    </div>
+
+    <div class="conf-section">
+      <div class="conf-section-title">🪟 Lasi</div>
+      <div class="conf-row">
+        ${cell('Eurokoodi', val('eurokoodi'))}
+        ${cell('Varasto', val('lasi-varasto'))}
+        ${cell('Toimittaja', val('lasi-toimittaja'))}
+        ${cell('Toimituspvm', val('lasi-toimituspvm'))}
+      </div>
+      ${tarvikkeet.length ? `<div class="conf-row col2">${tarvikkeet.map(t => cell('Tarvike', t)).join('')}</div>` : ''}
+    </div>
+
+    <div class="conf-section">
+      <div class="conf-section-title">🛡️ Vakuutus & hinta</div>
+      <div class="conf-row">
+        ${cell('Vakuutus', vakStr, 2)}
+        ${cell('Omavastuu', val('omavastuu') ? val('omavastuu')+' €' : '')}
+        ${cell('Hinta', val('hinta') ? val('hinta')+' €' : '')}
+      </div>
+      ${cb.length || val('lisatiedot') ? `<div class="conf-row col2">
+        ${cb.length ? cell('Lisäpalvelut', cb.join(', '), 2) : ''}
+        ${val('lisatiedot') ? cell('Lisätiedot', val('lisatiedot'), 2) : ''}
+      </div>` : ''}
+    </div>
+
+    <div class="conf-section">
+      <div class="conf-section-title">📋 Varaaja</div>
+      <div class="conf-row col2">
+        ${cell('Varaaja', val('varaaja'))}
+        ${isTarjous ? cell('Tila', '💬 TARJOUS – ei vahvistettu') : cell('Tila', '📅 Asennusvaraus')}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('confirm-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  pendingEventData = null;
+}
+
+document.getElementById('modal-close-btn').addEventListener('click', closeConfirmModal);
+document.getElementById('modal-edit-btn').addEventListener('click', closeConfirmModal);
+document.getElementById('confirm-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirmModal();
+});
+document.getElementById('modal-print-btn').addEventListener('click', function() {
+  if (!pendingEventData) { window.print(); return; }
+  const { piste } = pendingEventData;
+  const pvmStr = val('paivamaara').split('-').reverse().join('.');
+  const aikaStr = val('kellonaika').replace(':', '.');
+  const rek = val('rekisteri') || val('vin') || 'TUNTEMATON';
+  const oldTitle = document.title;
+  document.title = `${rek} ${pvmStr} ${aikaStr}`;
+  window.print();
+  document.title = oldTitle;
+});
+document.getElementById('modal-confirm-btn').addEventListener('click', function() {
+  if (!pendingEventData) return;
+  const { event, calId, isTarjous, piste } = pendingEventData;
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = isTarjous ? 'Tallennetaan...' : 'Luodaan varausta...';
+
+  if (DEMO_MODE) {
+    setTimeout(() => {
+      closeConfirmModal();
+      showDemoPreview(event, calId, isTarjous, piste);
+      document.getElementById('submit-btn').disabled = false;
+      document.getElementById('submit-btn').textContent = isTarjous ? 'Tallenna tarjous kalenteriin →' : 'Luo kalenterivaraus →';
+    }, 700);
+    return;
+  }
+
+  fetch(`https://www.googleapis.com/calendar/v3/calendars/${calId.replace('@', '%40')}/events`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify(event),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.id) {
+      closeConfirmModal();
+      showToast(isTarjous ? `Tarjous tallennettu! (${piste})` : 'Varaus luotu: ' + piste, 'success');
+      const pvmStr = val('paivamaara').split('-').reverse().join('.');
+      const aikaStr = val('kellonaika').replace(':', '.');
+      luoJaTallennaTarra(
+        val('rekisteri') || val('vin') || 'TUNTEMATON',
+        piste,
+        val('eurokoodi') || '',
+        pvmStr,
+        aikaStr
+      );
+      // Tyhjennä lomake
+      resetForm();
+    } else {
+      throw new Error(data.error?.message || 'Tuntematon virhe');
+    }
+  })
+  .catch(err => {
+    showToast('Virhe: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = isTarjous ? '✅ Vahvista tarjous' : '✅ Vahvista varaus';
+  });
+});
+
+function resetForm() {
+  // Tyhjennä kentät
+  ['rekisteri','vin','merkki','malli','viite','autoliike',
+   'eurokoodi','lasi-varasto','lasi-toimittaja','lasi-toimituspvm','lasi-selite',
+   'etunimi','sukunimi','puhelin','email','osoite','postinro','kaupunki',
+   'hinta','lisatiedot','vahinkopv','vahinkotunnus','omavastuu','vakuutus-huomioita',
+   'tyyppi-custom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  // Palauta päivä tähän päivään ja aika 08:00
+  document.getElementById('paivamaara').value = new Date().toISOString().slice(0,10);
+  document.getElementById('kellonaika').value = '08:00';
+  document.getElementById('kellonaika-h').value = '08';
+  document.getElementById('kellonaika-m').value = '00';
+  document.getElementById('lasi-toimittaja-select').value = '';
+  document.getElementById('lasi-toimittaja').style.display = 'none';
+  document.getElementById('lasi-toimittaja-select').style.display = 'block';
+  document.getElementById('autoliike-select').value = '';
+  document.getElementById('autoliike').style.display = 'none';
+  document.getElementById('autoliike-select').style.display = 'block';
+  document.getElementById('omavastuu-select').value = '';
+  // Vakuutus
+  document.getElementById('vakuutus').value = '';
+  document.getElementById('vakuutus-extra').classList.add('hidden');
+  document.querySelectorAll('input[name="vakuutus-tarkistettu"]').forEach(r => r.checked = false);
+  // Checkboxit
+  ['cb-pinnoitus','cb-sulat','cb-sijaisauto'].forEach(id => {
+    document.getElementById(id).checked = false;
+  });
+  // Työnimike
+  document.querySelectorAll('.tyyppi-btn').forEach((b,i) => {
+    b.classList.toggle('active', i === 0);
+  });
+  activeTyyppiBtn = document.querySelector('.tyyppi-btn');
+  // Piste pois
+  document.querySelectorAll('.piste-btn').forEach(b => b.classList.remove('active'));
+  selectedPiste = null;
+  // Tarvikkeet: nollaa lista, lisää yksi tyhjä
+  document.getElementById('tarvike-list').innerHTML = '';
+  tarvikeCnt = 0;
+  addTarvike();
+  // Submit-nappi
+  document.getElementById('submit-btn').textContent = currentMode === 'tarjous' ? 'Tallenna tarjous kalenteriin →' : 'Luo kalenterivaraus →';
+  document.getElementById('submit-btn').disabled = false;
+}
+
+// --- Lomakkeen lähetys ---
+document.getElementById('submit-btn').addEventListener('click', createEvent);
+
+function val(id) {
+  if (id === 'autoliike') {
+    const sel = document.getElementById('autoliike-select');
+    const inp = document.getElementById('autoliike');
+    if (inp.style.display !== 'none') return inp.value.trim();
+    const v = sel.value;
+    return (v && v !== '__uusi__' && v !== '__poista__') ? v.trim() : '';
+  }
+  if (id === 'lasi-toimittaja') {
+    const sel = document.getElementById('lasi-toimittaja-select');
+    const inp = document.getElementById('lasi-toimittaja');
+    if (inp && inp.style.display !== 'none') return inp.value.trim();
+    const v = sel ? sel.value : '';
+    return (v && v !== '__uusi__' && v !== '__poista__') ? v.trim() : '';
+  }
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function buildDescription() {
+  const tarvikkeet = [];
+  document.querySelectorAll('.tarvike-row').forEach(row => {
+    const ins = row.querySelectorAll('input[type="text"]');
+    const tSel = row.querySelector('.tarvike-toimittaja-select');
+    const tInp = row.querySelector('.tarvike-toimittaja-input');
+    const toimittaja = (tInp && tInp.style.display !== 'none')
+      ? tInp.value.trim()
+      : (tSel && tSel.value && tSel.value !== '__uusi__' && tSel.value !== '__poista__' ? tSel.value : '');
+    if (ins[0].value.trim()) tarvikkeet.push(`• ${ins[0].value} | varasto: ${ins[1].value} | toimittaja: ${toimittaja}`);
+  });
+  const cb = [];
+  if (document.getElementById('cb-pinnoitus').checked) cb.push('Pinnoitus');
+  if (document.getElementById('cb-sulat').checked) cb.push('Sulat');
+  if (document.getElementById('cb-sijaisauto').checked) cb.push('Sijaisauto');
+  const vak = val('vakuutus');
+  const osoiteRivi = [val('osoite'), val('postinro'), val('kaupunki')].filter(Boolean).join(', ');
+  const parts = [
+    `👤 Varaaja: ${val('varaaja')}`,
+    currentMode === 'tarjous' ? '💬 TARJOUS – ei vahvistettu varaus' : '',
+    '',
+    '─────────────────────────',
+    `🚗  AJONEUVO`,
+    '─────────────────────────',
+    `Rekisteri:    ${val('rekisteri')}`,
+    `VIN / tunniste: ${val('vin')}`,
+    `Merkki:       ${val('merkki')}`,
+    `Malli:        ${val('malli')}`,
+    val('viite') ? `Viite:        ${val('viite')}` : '',
+    '',
+    '─────────────────────────',
+    `👤  ASIAKAS`,
+    '─────────────────────────',
+    `Nimi:         ${val('etunimi')} ${val('sukunimi')}`,
+    val('autoliike') ? `Autoliike:    ${val('autoliike')}` : '',
+    `Puhelin:      ${val('puhelin')}`,
+    val('email') ? `Sähköposti:   ${val('email')}` : '',
+    osoiteRivi ? `Osoite:       ${osoiteRivi}` : '',
+    '',
+    '─────────────────────────',
+    `🪟  LASI`,
+    '─────────────────────────',
+    `Eurokoodi:    ${val('eurokoodi')}`,
+    `Varasto:      ${val('lasi-varasto')}`,
+    val('lasi-toimittaja') ? `Toimittaja:   ${val('lasi-toimittaja')}` : '',
+    val('lasi-toimituspvm') ? `Toimituspvm:  ${val('lasi-toimituspvm')}` : '',
+    val('lasi-selite') ? `Selite:       ${val('lasi-selite')}` : '',
+    '',
+    tarvikkeet.length ? '─────────────────────────\n📦  TARVIKKEET\n─────────────────────────\n' + tarvikkeet.join('\n') : '',
+    '',
+    '─────────────────────────',
+    `🛡️  VAKUUTUS`,
+    '─────────────────────────',
+    `Yhtiö:        ${vak || 'Ei vakuutusta'}`,
+    vak && vak !== 'Ei vakuutusta' ? `Vahinkopäivä: ${val('vahinkopv')}` : '',
+    vak && vak !== 'Ei vakuutusta' ? `Vahinkotunnus: ${val('vahinkotunnus')}` : '',
+    vak && vak !== 'Ei vakuutusta' ? `Omavastuu:    ${val('omavastuu')} €` : '',
+    (() => { const r = document.querySelector('input[name="vakuutus-tarkistettu"]:checked'); return r ? `Vakuutus tarkistettu: ${r.value}` : 'Vakuutus tarkistettu: -'; })(),
+    val('vakuutus-huomioita') ? `Huomioita: ${val('vakuutus-huomioita')}` : '',
+    '',
+    '─────────────────────────',
+    `💶  HINTA & LISÄPALVELUT`,
+    '─────────────────────────',
+    `Hinta:        ${val('hinta')} €`,
+    cb.length ? `Lisäpalvelut: ${cb.join(', ')}` : '',
+    val('lisatiedot') ? `\n📝 Lisätiedot:\n${val('lisatiedot')}` : '',
+  ];
+  return parts.filter(p => p !== '').join('\n');
+}
+
+function getColorId(tyyppi, isTarjous) {
+  if (isTarjous) return '6';         // Mandariini (oranssi)
+  if (tyyppi === 'REKLAMAATIO') return '4'; // Flambingo (punainen)
+  return '7';                        // Riikinkukko (sinivihreä) – Asennus, Korjaus, Muu
+}
+
+function createEvent() {
+  if (!accessToken) { showToast('Kirjaudu ensin Google-tilille', 'error'); return; }
+  if (!selectedPiste) { showToast('Valitse asennuspiste', 'error'); return; }
+  if (!val('paivamaara') || !val('kellonaika')) { showToast('Päivämäärä ja kellonaika vaaditaan', 'error'); return; }
+  const vakYhtio = val('vakuutus');
+  const vakTark = document.querySelector('input[name="vakuutus-tarkistettu"]:checked');
+  if (vakYhtio && vakYhtio !== 'Ei vakuutusta' && !vakTark) {
+    showToast('Merkitse onko vakuutus tarkistettu (K/E)', 'error'); return;
+  }
+
+  const tyyppi = (activeTyyppiBtn ? activeTyyppiBtn.dataset.val : (tyyppiCustom.value.trim() || 'Asennus')).toUpperCase();
+  const asiakas = (val('autoliike') || `${val('etunimi')} ${val('sukunimi')}`.trim() || 'ASIAKAS').toUpperCase();
+  const rekNro = val('rekisteri') || val('vin') || '';
+  const ajoneuvo = `${val('merkki')} ${val('malli')}`.trim().toUpperCase();
+  const isTarjous = currentMode === 'tarjous';
+  const titlePrefix = isTarjous ? 'TARJOUS' : tyyppi;
+  const titleParts = [titlePrefix, rekNro, ajoneuvo, asiakas].filter(Boolean);
+  const title = titleParts.join(' ');
+
+  const startDt = new Date(`${val('paivamaara')}T${val('kellonaika')}:00`);
+  const endDt = new Date(startDt.getTime() + 60 * 60 * 1000);
+
+  const event = {
+    summary: title,
+    description: buildDescription(),
+    colorId: getColorId(tyyppi, isTarjous),
+    start: { dateTime: startDt.toISOString(), timeZone: 'Europe/Helsinki' },
+    end: { dateTime: endDt.toISOString(), timeZone: 'Europe/Helsinki' },
+  };
+
+  let calId, pisteLabel;
+  if (isTarjous) {
+    calId = TARJOUS_CALENDAR_ID;
+    pisteLabel = 'Tarjoukset';
+  } else {
+    const activePiste = document.querySelector('.piste-btn.active');
+    calId = activePiste?.dataset.cal;
+    pisteLabel = selectedPiste;
+    if (!calId) { showToast('Valitse asennuspiste', 'error'); return; }
+  }
+
+  // Avaa vahvistusmodaali – ei vielä lähetä!
+  openConfirmModal(event, calId, isTarjous, pisteLabel);
+}
+
+
+async function luoJaTallennaTarra(rekNro, asennusPaikka, lasiKoodi, asennusPvm, asennusAika) {
+  const { jsPDF } = window.jspdf;
+
+  // Tarra: 62mm x automaattinen korkeus
+  const W = 62;
+  const margin = 3;
+  const usableW = W - margin * 2;
+  const gap = 2.5;
+  const padding = 4;
+
+  // Laske sopivat fonttikoot
+  function maxFont(doc, text, maxW, maxPt, minPt = 8) {
+    for (let pt = maxPt; pt >= minPt; pt--) {
+      doc.setFontSize(pt);
+      if (doc.getTextWidth(text) <= maxW) return pt;
+    }
+    return minPt;
+  }
+
+  // Väliaikainen doc fonttikoon laskemiseen
+  const tmp = new jsPDF({ unit: 'mm', format: [62, 200] });
+  tmp.setFont('helvetica', 'bold');
+  const rekPt    = Math.min(60, maxFont(tmp, rekNro,       usableW, 200));
+  const paikkaPt = Math.min(rekPt, maxFont(tmp, asennusPaikka, usableW, 200));
+  const infoPt   = Math.min(32,
+    Math.min(
+      maxFont(tmp, lasiKoodi,  usableW, 200),
+      maxFont(tmp, asennusPvm, usableW, 200)
+    )
+  );
+
+  // Laske korkeus (pt → mm: 1pt = 0.3528mm)
+  const rekH    = rekPt    * 0.3528;
+  const paikkaH = paikkaPt * 0.3528;
+  const infoH   = infoPt   * 0.3528;
+  const H = padding + rekH + gap + gap + paikkaH + gap + gap + infoH + gap + infoH + padding;
+
+  const doc = new jsPDF({ unit: 'mm', format: [W, H] });
+  doc.setFont('helvetica', 'bold');
+
+  let y = padding + rekH;
+
+  // Rekisterinumero
+  doc.setFontSize(rekPt);
+  doc.text(rekNro, W/2, y, { align: 'center' });
+  y += gap;
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, W - margin, y);
+
+  // Asennuspaikka
+  y += gap + paikkaH;
+  doc.setFontSize(paikkaPt);
+  doc.text(asennusPaikka, W/2, y, { align: 'center' });
+  y += gap;
+  doc.line(margin, y, W - margin, y);
+
+  // Lasikoodi
+  y += gap + infoH;
+  doc.setFontSize(infoPt);
+  doc.text(lasiKoodi || '-', W/2, y, { align: 'center' });
+
+  // Asennuspäivä
+  y += gap + infoH;
+  doc.text(asennusPvm, W/2, y, { align: 'center' });
+
+  // PDF binäärinä
+  const pdfBlob = doc.output('blob');
+
+  // Tiedostonimi: "XXX-111 15.05.2026 10.30.pdf"
+  const fileName = `${rekNro} ${asennusPvm} ${asennusAika}.pdf`;
+
+  // Lähetä Google Driveen
+  try {
+    const metadata = {
+      name: fileName,
+      parents: [DRIVE_TARRAT_FOLDER],
+      mimeType: 'application/pdf'
+    };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', pdfBlob);
+
+    const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + accessToken },
+      body: form
+    });
+    const data = await resp.json();
+    if (data.id) {
+      showToast('Tarra tallennettu Driveen: ' + fileName, 'success');
+    } else {
+      throw new Error(data.error?.message || 'Drive-virhe');
+    }
+  } catch (err) {
+    showToast('Tarra-virhe: ' + err.message, 'error');
+  }
+}
+
+function showDemoPreview(event, calId, isTarjous, piste) {
+  // Poista vanha esikatselu
+  const old = document.getElementById('demo-preview');
+  if (old) old.remove();
+
+  const startStr = new Date(event.start.dateTime).toLocaleString('fi-FI', { dateStyle: 'full', timeStyle: 'short' });
+  const endStr = new Date(event.end.dateTime).toLocaleTimeString('fi-FI', { timeStyle: 'short' });
+
+  const div = document.createElement('div');
+  div.id = 'demo-preview';
+  div.style.cssText = `
+    background: #fff;
+    border: 2px solid #f59e0b;
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-top: 16px;
+    font-family: 'DM Sans', sans-serif;
+  `;
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <span style="font-size:18px;">🧪</span>
+      <strong style="font-size:14px;color:#92400e;">SIMULAATIO – Näin varaus menisi kalenteriin</strong>
+    </div>
+    <div style="background:#fef3c7;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#78350f;">
+      Testi kalenteri: <code style="font-size:11px;">${calId.slice(0,30)}...</code>
+    </div>
+    <div style="margin-bottom:8px;">
+      <span style="font-size:11px;font-weight:600;color:#9e9b94;text-transform:uppercase;letter-spacing:0.08em;">Tapahtuman otsikko</span><br>
+      <strong style="font-size:15px;">${event.summary}</strong>
+    </div>
+    <div style="margin-bottom:12px;">
+      <span style="font-size:11px;font-weight:600;color:#9e9b94;text-transform:uppercase;letter-spacing:0.08em;">Aika</span><br>
+      <span style="font-size:13px;">${startStr} – ${endStr}</span>
+    </div>
+    <div style="margin-bottom:14px;">
+      <span style="font-size:11px;font-weight:600;color:#9e9b94;text-transform:uppercase;letter-spacing:0.08em;">Kuvaus kalenterissa</span>
+      <pre style="font-size:12px;line-height:1.6;white-space:pre-wrap;background:#f9f8f6;border-radius:8px;padding:12px;margin-top:6px;color:#1a1916;border:1px solid #e2e0da;">${event.description}</pre>
+    </div>
+    <button onclick="document.getElementById('demo-preview').remove()" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 18px;border-radius:8px;border:1px solid #e2e0da;background:#f9f8f6;cursor:pointer;color:#6b6860;">Sulje esikatselu</button>
+  `;
+
+  document.querySelector('.submit-area').after(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// --- Teeman vaihto ---
+
+const LOGO_DARK = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+const LOGO_LIGHT = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('theme-icon').textContent = isLight ? '🌙' : '☀️';
+  document.getElementById('stm-logo').src = isLight ? LOGO_LIGHT : LOGO_DARK;
+  localStorage.setItem('stm_theme', isLight ? 'light' : 'dark');
+}
+// Lataa tallennettu teema
+if (localStorage.getItem('stm_theme') === 'light') {
+  document.body.classList.add('light');
+  document.getElementById('theme-icon').textContent = '🌙';
+  document.getElementById('stm-logo').src = LOGO_LIGHT;
+}
+
+// Default päivä = tänään
+document.getElementById('paivamaara').value = new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
