@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>STM Varauskeskus</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg: #1c1c1c;
+    --surface: #2a2a2a;
+    --surface2: #303131;
+    --surface3: #3a3a3a;
+    --border: #3f3f40;
+    --border2: #4e4e4f;
+    --text: #f0f0f0;
+    --text2: #aaaaaa;
+    --text3: #888586;
+    --accent: #E50420;
+    --accent-hover: #c4261b;
+    --success: #2c901e;
+    --success-light: #0d2210;
+    --danger: #ff5126;
+    --warning: #fbbf24;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; }
+
+  header {
+    position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  #auth-btn { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; cursor: pointer; }
+  #auth-btn.signed-in { color: var(--success); border-color: var(--success); }
+
+  main { padding: 20px; max-width: 1100px; margin: 0 auto; }
+
+  #status-msg { text-align: center; color: var(--text3); padding: 40px 16px; font-size: 14px; }
+  #status-msg.error-msg { color: var(--danger); }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filters select, .filters input {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 12px; font-size: 13px; font-family: inherit;
+  }
+
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; }
+  th, td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--border); }
+  th { background: var(--surface2); color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  .tila-badge { padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; }
+  .tila-Varattu { background: var(--surface3); color: var(--text2); }
+  .tila-Työn.alla, .tila-tyon-alla { background: var(--success-light); color: var(--success); }
+  .tila-Valmis { background: var(--success-light); color: var(--success); }
+  .tila-Peruutettu { background: rgba(255,81,38,0.12); color: var(--danger); }
+
+  .note-dot { color: var(--warning); font-size: 14px; margin-left: 4px; }
+
+  .edit-btn {
+    background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); border-radius: 6px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer;
+  }
+  .edit-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .edit-row td { background: var(--surface2); padding: 16px 12px; }
+  .edit-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .edit-field { display: flex; flex-direction: column; gap: 4px; }
+  .edit-field label { font-size: 10px; text-transform: uppercase; color: var(--text3); letter-spacing: 0.04em; }
+  .edit-field input, .edit-field select, .edit-field textarea {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font-size: 13px; font-family: inherit; min-width: 130px;
+  }
+  .edit-field textarea { min-width: 220px; min-height: 36px; resize: vertical; }
+  .edit-actions { display: flex; gap: 8px; }
+  .btn-save { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-save:hover { background: var(--accent-hover); }
+  .btn-cancel { background: var(--surface3); color: var(--text2); border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+  .btn-peruuta { background: transparent; color: var(--danger); border: 1px solid var(--danger); border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+  .btn-peruuta:hover { background: rgba(255,81,38,0.1); }
+
+  #toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: var(--surface3); color: var(--text); padding: 12px 18px; border-radius: var(--radius); font-size: 14px;
+    opacity: 0; transition: all 0.25s ease; z-index: 100; max-width: 90%;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.error { background: var(--danger); color: white; }
+  #toast.success { background: var(--success); color: white; }
+
+  /* ── LISÄTIETOJA-POPUP ── */
+  .lisatieto-popup-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px;
+  }
+  .lisatieto-popup {
+    background: var(--surface); border: 1px solid var(--warning);
+    border-radius: var(--radius-lg); padding: 20px; max-width: 420px; width: 100%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .lisatieto-popup-title {
+    font-size: 15px; font-weight: 700; color: var(--warning); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .lisatieto-popup-text {
+    font-size: 14px; color: var(--text); line-height: 1.5; margin-bottom: 16px;
+    white-space: pre-wrap;
+  }
+  .lisatieto-popup-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .lp-close {
+    background: var(--accent); color: white; border: none; border-radius: var(--radius);
+    padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .lp-hide {
+    background: var(--surface2); color: var(--text2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 8px 16px; font-size: 13px; cursor: pointer;
+  }
+
+  @media (max-width: 700px) {
+    table, thead, tbody, th, td, tr { display: block; }
+    thead { display: none; }
+    tr { margin-bottom: 10px; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); }
+    td { border-bottom: 1px solid var(--border); }
+    td::before { content: attr(data-label); display: block; font-size: 10px; text-transform: uppercase; color: var(--text3); margin-bottom: 3px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Varauskeskus</h1>
+  <button id="auth-btn">Kirjaudu</button>
+</header>
+
+<main>
+  <div id="status-msg">Kirjaudu sisään nähdäksesi varaukset.</div>
+
+  <div id="content" style="display:none;">
+    <div class="filters">
+      <select id="filter-piste">
+        <option value="">Kaikki pisteet</option>
+      </select>
+      <select id="filter-tila">
+        <option value="">Kaikki tilat</option>
+        <option value="Varattu">Varattu</option>
+        <option value="Työn alla">Työn alla</option>
+        <option value="Valmis">Valmis</option>
+        <option value="Peruutettu">Peruutettu</option>
+      </select>
+      <input type="text" id="filter-haku" placeholder="Hae rekisterinumerolla tai varausnumerolla..." style="flex:1; min-width:200px;" />
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Varausnumero</th>
+          <th>Piste</th>
+          <th>Pvm / klo</th>
+          <th>Tyyppi</th>
+          <th>Rekisteri</th>
+          <th>Tila</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="varaus-list"></tbody>
+    </table>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const CLIENT_ID = '407173392975-daujo79fag2g1si9spljnv6vkct5ccqj.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/userinfo.email';
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwJD34dyJhcwvp0l2JDwCkB2cVgM2Ue9pWRYQ1jp9xh8z_k9maSv7bkt69ZJgfkc-pN/exec';
+const PISTEET = ['Hatanpää','Kuopio','Lahti','Lempäälä','Lielahti','Pirkkala','Vantaa','Ylöjärvi','TEST'];
+const TYYPIT = ['Vaihto','Korjaus','Reklamaatio','Muu'];
+const TILAT = ['Varattu','Työn alla','Valmis','Peruutettu'];
+
+let accessToken = null;
+let currentUserEmail = null;
+let kaikkiVaraukset = [];
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type ? ' ' + type : '');
+  setTimeout(() => { t.className = ''; }, 3000);
+}
+
+// ── LISÄTIETOJA-POPUP ────────────────────────────────────────
+function lisatietoOhitusAvain(email, varausId) {
+  return 'stm_lisatieto_ohita_' + (email || 'tuntematon') + '_' + varausId;
+}
+
+function naytaLisatietoPopup(varausId, teksti) {
+  if (!teksti || !teksti.trim()) return;
+  const avain = lisatietoOhitusAvain(currentUserEmail, varausId);
+  if (localStorage.getItem(avain) === '1') return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'lisatieto-popup-overlay';
+  overlay.innerHTML = `
+    <div class="lisatieto-popup">
+      <div class="lisatieto-popup-title">📝 Lisätietoja tästä varauksesta</div>
+      <div class="lisatieto-popup-text"></div>
+      <div class="lisatieto-popup-actions">
+        <button class="lp-close">Sulje</button>
+        <button class="lp-hide">Älä näytä uudestaan</button>
+      </div>
+    </div>
+  `;
+  overlay.querySelector('.lisatieto-popup-text').textContent = teksti;
+  document.body.appendChild(overlay);
+
+  const poista = () => { if (overlay.parentNode) overlay.remove(); };
+  const ajastin = setTimeout(poista, 15000);
+
+  overlay.querySelector('.lp-close').addEventListener('click', () => { clearTimeout(ajastin); poista(); });
+  overlay.querySelector('.lp-hide').addEventListener('click', () => {
+    localStorage.setItem(avain, '1');
+    clearTimeout(ajastin);
+    poista();
+  });
+}
+
+// Täytä piste-filtteri
+PISTEET.forEach(p => {
+  const opt = document.createElement('option');
+  opt.value = p; opt.textContent = p;
+  document.getElementById('filter-piste').appendChild(opt);
+});
+
+// ── KIRJAUTUMINEN ──────────────────────────────────────────────
+function initGoogleAuth() {
+  if (!window.google) { setTimeout(initGoogleAuth, 500); return; }
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showToast('Kirjautuminen epäonnistui: ' + resp.error, 'error'); return; }
+      accessToken = resp.access_token;
+      const btn = document.getElementById('auth-btn');
+      btn.classList.add('signed-in');
+      btn.textContent = 'Kirjautunut';
+      await haeOmaEmail();
+      await lataaVaraukset();
+    }
+  });
+  document.getElementById('auth-btn').addEventListener('click', () => {
+    if (!accessToken) tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+initGoogleAuth();
+
+async function haeOmaEmail() {
+  try {
+    const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { 'Authorization': 'Bearer ' + accessToken }
+    });
+    const data = await resp.json();
+    currentUserEmail = (data.email || '').toLowerCase();
+  } catch (e) {
+    currentUserEmail = null;
+  }
+}
+
+// ── HAE KAIKKI VARAUKSET ────────────────────────────────────────
+async function lataaVaraukset() {
+  const statusEl = document.getElementById('status-msg');
+  statusEl.style.display = 'block';
+  statusEl.className = '';
+  statusEl.textContent = 'Haetaan varauksia...';
+  document.getElementById('content').style.display = 'none';
+
+  try {
+    const url = WEBHOOK_URL + '?action=haeKaikkiVaraukset&token=' + encodeURIComponent(accessToken);
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (!data.ok) {
+      statusEl.className = 'error-msg';
+      statusEl.textContent = '🔒 ' + (data.error || 'Pääsy evätty');
+      return;
+    }
+
+    kaikkiVaraukset = data.varaukset || [];
+    statusEl.style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    renderoiTaulukko();
+
+  } catch (e) {
+    statusEl.className = 'error-msg';
+    statusEl.textContent = 'Hakuvirhe: ' + e.message;
+  }
+}
+
+document.getElementById('filter-piste').addEventListener('change', renderoiTaulukko);
+document.getElementById('filter-tila').addEventListener('change', renderoiTaulukko);
+document.getElementById('filter-haku').addEventListener('input', renderoiTaulukko);
+
+function renderoiTaulukko() {
+  const piste = document.getElementById('filter-piste').value;
+  const tila = document.getElementById('filter-tila').value;
+  const haku = document.getElementById('filter-haku').value.trim().toLowerCase();
+
+  const suodatetut = kaikkiVaraukset.filter(v => {
+    if (piste && v.piste !== piste) return false;
+    if (tila && v.tila !== tila) return false;
+    if (haku && !(v.rekisteri || '').toLowerCase().includes(haku) && !(v.varausnumero || '').toLowerCase().includes(haku)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('varaus-list');
+  tbody.innerHTML = '';
+
+  if (suodatetut.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px;">Ei varauksia näillä suodattimilla.</td></tr>';
+    return;
+  }
+
+  suodatetut.forEach(v => tbody.appendChild(renderoiRivi(v)));
+}
+
+function tilaLuokka(tila) {
+  return 'tila-' + tila.replace(/\s+/g, '-');
+}
+
+function renderoiRivi(v) {
+  const tr = document.createElement('tr');
+  const onLisatietoja = v.lisatiedot && v.lisatiedot.trim();
+  tr.innerHTML = `
+    <td data-label="Varausnumero">${v.varausnumero || ''}${onLisatietoja ? '<span class="note-dot" title="Lisätietoja">📝</span>' : ''}</td>
+    <td data-label="Piste">${v.piste || ''}</td>
+    <td data-label="Pvm / klo">${v.paivamaara || ''} ${v.kellonaika || ''}</td>
+    <td data-label="Tyyppi">${v.tyyppi || ''}</td>
+    <td data-label="Rekisteri">${v.rekisteri || ''}</td>
+    <td data-label="Tila"><span class="tila-badge ${tilaLuokka(v.tila || 'Varattu')}">${v.tila || ''}</span></td>
+    <td data-label=""><button class="edit-btn">Muokkaa</button></td>
+  `;
+  tr.querySelector('.edit-btn').addEventListener('click', () => {
+    naytaLisatietoPopup(v.id, v.lisatiedot);
+    avaaMuokkaus(tr, v);
+  });
+  return tr;
+}
+
+function avaaMuokkaus(tr, v) {
+  // Sulje muut auki olevat muokkausrivit
+  document.querySelectorAll('.edit-row').forEach(el => el.remove());
+
+  const editTr = document.createElement('tr');
+  editTr.className = 'edit-row';
+  editTr.innerHTML = `
+    <td colspan="7">
+      <div class="edit-form">
+        <div class="edit-field">
+          <label>Päivämäärä</label>
+          <input type="date" class="f-pvm" value="${(v.paivamaara || '').substring(0,10)}" />
+        </div>
+        <div class="edit-field">
+          <label>Kellonaika</label>
+          <input type="text" class="f-klo" value="${v.kellonaika || ''}" placeholder="HH:MM" />
+        </div>
+        <div class="edit-field">
+          <label>Tyyppi</label>
+          <select class="f-tyyppi">
+            ${TYYPIT.map(t => `<option value="${t}" ${t === v.tyyppi ? 'selected' : ''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="edit-field">
+          <label>Tila</label>
+          <select class="f-tila">
+            ${TILAT.map(t => `<option value="${t}" ${t === v.tila ? 'selected' : ''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="edit-field" style="flex:1;">
+          <label>Lisätietoja</label>
+          <textarea class="f-lisatiedot">${v.lisatiedot || ''}</textarea>
+        </div>
+        <div class="edit-actions">
+          <button class="btn-save">💾 Tallenna</button>
+          <button class="btn-cancel">Peruuta muokkaus</button>
+          <button class="btn-peruuta">✕ Peruuta varaus</button>
+        </div>
+      </div>
+    </td>
+  `;
+  tr.after(editTr);
+
+  editTr.querySelector('.btn-cancel').addEventListener('click', () => editTr.remove());
+
+  editTr.querySelector('.btn-save').addEventListener('click', () => {
+    const fields = {
+      'päivämäärä': editTr.querySelector('.f-pvm').value,
+      'kellonaika': editTr.querySelector('.f-klo').value,
+      'tyyppi': editTr.querySelector('.f-tyyppi').value,
+      'tila': editTr.querySelector('.f-tila').value,
+      'Lisätiedot': editTr.querySelector('.f-lisatiedot').value,
+    };
+    tallennaMuutos(v.id, fields, editTr);
+  });
+
+  editTr.querySelector('.btn-peruuta').addEventListener('click', () => {
+    if (!confirm('Peruutetaanko varaus ' + v.varausnumero + '?')) return;
+    tallennaMuutos(v.id, { 'tila': 'Peruutettu' }, editTr);
+  });
+}
+
+async function tallennaMuutos(id, fields, editTr) {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?action=paivitaVaraus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ token: accessToken, id: id, fields: fields })
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Tallennus epäonnistui');
+
+    const idx = kaikkiVaraukset.findIndex(x => x.id === id);
+    if (idx !== -1) {
+      kaikkiVaraukset[idx] = Object.assign({}, kaikkiVaraukset[idx], {
+        paivamaara: fields['päivämäärä'] !== undefined ? fields['päivämäärä'] : kaikkiVaraukset[idx].paivamaara,
+        kellonaika: fields['kellonaika'] !== undefined ? fields['kellonaika'] : kaikkiVaraukset[idx].kellonaika,
+        tyyppi: fields['tyyppi'] !== undefined ? fields['tyyppi'] : kaikkiVaraukset[idx].tyyppi,
+        tila: fields['tila'] !== undefined ? fields['tila'] : kaikkiVaraukset[idx].tila,
+        lisatiedot: fields['Lisätiedot'] !== undefined ? fields['Lisätiedot'] : kaikkiVaraukset[idx].lisatiedot,
+      });
+    }
+    editTr.remove();
+    renderoiTaulukko();
+    showToast('Tallennettu', 'success');
+  } catch (e) {
+    showToast('Virhe: ' + e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>
