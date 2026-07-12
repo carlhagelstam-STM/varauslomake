@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>STM Varauskeskus</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg: #1c1c1c;
+    --surface: #2a2a2a;
+    --surface2: #303131;
+    --surface3: #3a3a3a;
+    --border: #3f3f40;
+    --border2: #4e4e4f;
+    --text: #f0f0f0;
+    --text2: #aaaaaa;
+    --text3: #888586;
+    --accent: #E50420;
+    --accent-hover: #c4261b;
+    --success: #2c901e;
+    --success-light: #0d2210;
+    --danger: #ff5126;
+    --warning: #fbbf24;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); }
+
+  header {
+    position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  #auth-btn { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; cursor: pointer; }
+  #auth-btn.signed-in { color: var(--success); border-color: var(--success); }
+
+  /* ── TOIMIPISTE- JA NÄKYMÄPALKKI ── */
+  #control-bar {
+    position: sticky; top: 53px; z-index: 19; background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  }
+  #piste-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .piste-btn {
+    background: var(--surface2); color: var(--text2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap;
+  }
+  .piste-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .piste-btn.kaikki-btn { border-color: var(--border2); font-weight: 700; }
+  .piste-btn.kaikki-btn.active { background: var(--surface3); color: var(--text); border-color: var(--text2); }
+
+  #view-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .nav-arrow {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border2);
+    border-radius: var(--radius); width: 32px; height: 32px; font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  #nav-label { font-weight: 700; font-size: 13px; white-space: nowrap; min-width: 150px; text-align: center; }
+  #view-toggle { display: flex; gap: 4px; }
+  .view-btn {
+    background: var(--surface2); color: var(--text2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 7px 12px; font-size: 12px; cursor: pointer;
+  }
+  .view-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  /* ── PÄÄASETTELU: kalenteri + sivupalkki ── */
+  #layout { display: flex; gap: 16px; padding: 20px; max-width: 1400px; margin: 0 auto; align-items: flex-start; }
+  #calendar-area { flex: 1; min-width: 0; }
+  #sidebar {
+    width: 260px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 14px; position: sticky; top: 112px;
+  }
+  #sidebar h2 { font-size: 13px; margin: 0 0 4px; font-weight: 700; }
+  #sidebar .sidebar-sub { font-size: 11px; color: var(--text3); margin-bottom: 12px; }
+  .sidebar-item {
+    border-radius: var(--radius); padding: 8px 10px; margin-bottom: 8px; cursor: pointer;
+    font-size: 12px; line-height: 1.4;
+  }
+  .sidebar-item.poikkeama { background: rgba(255,81,38,0.12); border: 1px solid var(--danger); color: var(--danger); }
+  .sidebar-item-title { font-weight: 700; }
+  .sidebar-empty { font-size: 12px; color: var(--text3); }
+
+  #status-msg { text-align: center; color: var(--text3); padding: 40px 16px; font-size: 14px; }
+  #status-msg.error-msg { color: var(--danger); }
+
+  /* ── PÄIVÄNÄKYMÄ (yhden pisteen) ── */
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; }
+  th, td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--border); }
+  th { background: var(--surface2); color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  tr:last-child td { border-bottom: none; }
+  tr.data-row:hover td { background: var(--surface2); cursor: pointer; }
+
+  .tila-badge { padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; }
+  .tila-Varattu { background: var(--surface3); color: var(--text2); }
+  .tila-Tyon-alla { background: var(--success-light); color: var(--success); }
+  .tila-Valmis { background: var(--success-light); color: var(--success); }
+  .tila-Peruutettu { background: rgba(255,81,38,0.12); color: var(--danger); }
+  .tila-Poikkeama { background: rgba(255,81,38,0.12); color: var(--danger); }
+
+  .note-dot { color: var(--warning); font-size: 14px; margin-left: 4px; }
+
+  /* ── VIIKKONÄKYMÄ (7 saraketta rinnakkain, ei scrollausta) ── */
+  #week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    height: calc(100vh - 160px);
+    min-height: 400px;
+  }
+  .week-col {
+    display: flex; flex-direction: column; min-width: 0;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .week-col-heading {
+    font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.04em; padding: 8px 6px; cursor: pointer; border-bottom: 1px solid var(--border);
+    text-align: center; flex-shrink: 0;
+  }
+  .week-col-heading:hover { color: var(--text); }
+  .week-col-body {
+    flex: 1; min-height: 0; overflow: hidden;
+    display: flex; flex-direction: column; gap: 4px; padding: 6px;
+  }
+  .day-empty { font-size: 11px; color: var(--text3); padding: 4px 2px; text-align: center; }
+  .week-tile {
+    padding: 6px 7px; border-radius: 6px;
+    border: 1px solid var(--border2); cursor: pointer; line-height: 1.25;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .week-tile-rek { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .week-tile-sub { font-size: 10px; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .week-tile.tile-vaihto { background: #1a3a5c; border-color: #2563eb; color: #93c5fd; }
+  .week-tile.tile-korjaus { background: #0d2e2a; border-color: #0f6e56; color: #5eead4; }
+  .week-tile.tile-reklamaatio { background: #3a1414; border-color: #dc2626; color: #fca5a5; }
+  .week-tile.tile-muu { background: var(--surface2); border-color: var(--border2); color: var(--text2); }
+  .week-tile.tile-valmis { background: var(--success-light); border-color: var(--success); color: var(--success); }
+  .week-tile.tile-poikkeama { background: rgba(255,81,38,0.12); border-color: var(--danger); color: var(--danger); }
+  @media (max-width: 900px) {
+    #week-grid { display: flex; flex-direction: column; height: auto; }
+    .week-col-body { overflow: visible; }
+  }
+
+  /* ── KAIKKI PISTEET -NÄKYMÄ (ryhmitelty pisteittäin) ── */
+  .piste-group { margin-bottom: 20px; }
+  .piste-group-heading {
+    font-size: 14px; font-weight: 700; color: var(--text); padding: 10px 4px;
+    border-bottom: 2px solid var(--border2); margin-bottom: 8px;
+  }
+
+  /* ── MUOKKAUSLOMAKE (modaali) ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px;
+  }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 20px; max-width: 620px; width: 100%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    max-height: calc(100vh - 40px); overflow-y: auto;
+  }
+  .modal-title {
+    font-size: 15px; font-weight: 700; margin-bottom: 14px;
+    position: sticky; top: -20px; background: var(--surface); padding-top: 20px; margin-top: -20px;
+    z-index: 1;
+  }
+  .edit-form { display: flex; gap: 10px; flex-wrap: wrap; }
+  .edit-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 130px; }
+  .edit-field.full { flex-basis: 100%; }
+  .edit-field label { font-size: 10px; text-transform: uppercase; color: var(--text3); letter-spacing: 0.04em; }
+  .edit-field input, .edit-field select, .edit-field textarea {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font-size: 13px; font-family: inherit; width: 100%;
+  }
+  .edit-field textarea { min-height: 60px; resize: vertical; }
+  .edit-actions {
+    display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap;
+    position: sticky; bottom: -20px; background: var(--surface);
+    padding: 12px 0 20px; margin-bottom: -20px; border-top: 1px solid var(--border);
+  }
+  .btn-save { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-save:hover { background: var(--accent-hover); }
+  .btn-cancel { background: var(--surface3); color: var(--text2); border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+  .btn-peruuta { background: transparent; color: var(--danger); border: 1px solid var(--danger); border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+  .btn-peruuta:hover { background: rgba(255,81,38,0.1); }
+
+  /* ── "NÄYTÄ KAIKKI KENTÄT" -OSIO ── */
+  .btn-naytakaikki {
+    background: none; border: none; color: var(--text2); font-size: 12px; cursor: pointer;
+    padding: 8px 0; margin-top: 6px; text-align: left; width: 100%;
+  }
+  .btn-naytakaikki:hover { color: var(--text); }
+  .kaikki-kentat { margin-top: 4px; }
+  .kk-osio { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
+  .kk-otsikko { font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kk-lukuarvo {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font-size: 13px; color: var(--text2); min-height: 32px;
+    display: flex; align-items: center;
+  }
+
+  #toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: var(--surface3); color: var(--text); padding: 12px 18px; border-radius: var(--radius); font-size: 14px;
+    opacity: 0; transition: all 0.25s ease; z-index: 300; max-width: 90%;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.error { background: var(--danger); color: white; }
+  #toast.success { background: var(--success); color: white; }
+
+  @media (max-width: 900px) {
+    #layout { flex-direction: column; }
+    #sidebar { width: 100%; position: static; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📅 Varauskeskus — kalenterinäkymä</h1>
+  <button id="auth-btn">Kirjaudu</button>
+</header>
+
+<div id="control-bar">
+  <div id="piste-tabs"></div>
+  <div id="view-controls">
+    <button class="nav-arrow" id="nav-prev">‹</button>
+    <div id="nav-label"></div>
+    <button class="nav-arrow" id="nav-next">›</button>
+    <div id="view-toggle">
+      <button class="view-btn active" id="view-week">Viikko</button>
+      <button class="view-btn" id="view-day">Päivä</button>
+    </div>
+  </div>
+</div>
+
+<div id="layout">
+  <div id="calendar-area">
+    <div id="status-msg">Kirjaudu sisään nähdäksesi varaukset.</div>
+    <div id="calendar-content" style="display:none;"></div>
+  </div>
+
+  <div id="sidebar">
+    <h2>⚠️ Poikkeukset ja muut tehtävät</h2>
+    <div class="sidebar-sub">Päivitetään automaattisesti</div>
+    <div id="sidebar-list"><div class="sidebar-empty">Ei poikkeamia juuri nyt.</div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── ASETUKSET ─────────────────────────────────────────────────
+const CLIENT_ID = '407173392975-daujo79fag2g1si9spljnv6vkct5ccqj.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/userinfo.email';
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwJD34dyJhcwvp0l2JDwCkB2cVgM2Ue9pWRYQ1jp9xh8z_k9maSv7bkt69ZJgfkc-pN/exec';
+const PISTEET = ['Hatanpää','Kuopio','Lahti','Lempäälä','Lielahti','Pirkkala','Vantaa','Ylöjärvi','TEST'];
+const TYYPIT = ['Vaihto','Korjaus','Reklamaatio','Muu'];
+const TILAT = ['Varattu','Työn alla','Valmis','Peruutettu','Poikkeama'];
+
+let accessToken = null;
+let currentUserEmail = null;
+let kaikkiVaraukset = [];
+let currentPiste = PISTEET[0];
+let currentView = 'week';
+let currentDate = new Date();
+let currentWeekStart = maanantai(new Date());
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type ? ' ' + type : '');
+  setTimeout(() => { t.className = ''; }, 3000);
+}
+
+function fmtDate(d) {
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function lisaaPaivia(d, n) { const uusi = new Date(d); uusi.setDate(uusi.getDate() + n); return uusi; }
+function maanantai(d) {
+  const uusi = new Date(d);
+  const vp = (uusi.getDay() + 6) % 7;
+  uusi.setDate(uusi.getDate() - vp);
+  return uusi;
+}
+function tilaLuokka(tila) {
+  return 'tila-' + (tila || 'Varattu').replace(/\s+/g, '-');
+}
+function tileLuokka(v) {
+  if (v.tila === 'Poikkeama') return 'tile-poikkeama';
+  if (v.tila === 'Valmis') return 'tile-valmis';
+  const t = (v.tyyppi || '').toLowerCase();
+  if (t === 'vaihto') return 'tile-vaihto';
+  if (t === 'korjaus') return 'tile-korjaus';
+  if (t === 'reklamaatio') return 'tile-reklamaatio';
+  return 'tile-muu';
+}
+
+function rakennaPisteTabit() {
+  const wrap = document.getElementById('piste-tabs');
+  wrap.innerHTML = '';
+  PISTEET.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'piste-btn' + (p === currentPiste ? ' active' : '');
+    btn.textContent = p;
+    btn.addEventListener('click', () => vaihdaPiste(p));
+    wrap.appendChild(btn);
+  });
+  const kaikkiBtn = document.createElement('button');
+  kaikkiBtn.className = 'piste-btn kaikki-btn' + (currentPiste === '__kaikki__' ? ' active' : '');
+  kaikkiBtn.textContent = 'Kaikki pisteet';
+  kaikkiBtn.addEventListener('click', () => vaihdaPiste('__kaikki__'));
+  wrap.appendChild(kaikkiBtn);
+}
+
+function vaihdaPiste(p) {
+  currentPiste = p;
+  rakennaPisteTabit();
+  renderoiKalenteri();
+}
+
+function paivitaNavLabel() {
+  const label = document.getElementById('nav-label');
+  if (currentView === 'day') {
+    label.textContent = currentDate.toLocaleDateString('fi-FI', { weekday: 'long', day: 'numeric', month: 'numeric' });
+  } else {
+    const su = lisaaPaivia(currentWeekStart, 6);
+    label.textContent = currentWeekStart.toLocaleDateString('fi-FI', { day: 'numeric', month: 'numeric' })
+      + ' – ' + su.toLocaleDateString('fi-FI', { day: 'numeric', month: 'numeric' });
+  }
+}
+
+function vaihdaSuunta(suunta) {
+  if (currentView === 'day') currentDate = lisaaPaivia(currentDate, suunta);
+  else currentWeekStart = lisaaPaivia(currentWeekStart, suunta * 7);
+  paivitaNavLabel();
+  renderoiKalenteri();
+}
+
+function vaihdaNakyma(nakyma) {
+  currentView = nakyma;
+  document.getElementById('view-week').classList.toggle('active', nakyma === 'week');
+  document.getElementById('view-day').classList.toggle('active', nakyma === 'day');
+  paivitaNavLabel();
+  renderoiKalenteri();
+}
+
+document.getElementById('nav-prev').addEventListener('click', () => vaihdaSuunta(-1));
+document.getElementById('nav-next').addEventListener('click', () => vaihdaSuunta(1));
+document.getElementById('view-week').addEventListener('click', () => vaihdaNakyma('week'));
+document.getElementById('view-day').addEventListener('click', () => vaihdaNakyma('day'));
+
+// Ikkunan koon muuttuessa (esim. selain venytetään/pienennetään) lasketaan
+// viikkonäkymän laatikkokoko uusiksi, jotta koko viikko mahtuu edelleen
+// näytölle ilman scrollausta. Pieni viive (debounce) ettei piirretä joka
+// yksittäisellä pikselillä kesken venytyksen.
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (currentView === 'week' && currentPiste !== '__kaikki__' && kaikkiVaraukset.length >= 0 && accessToken) {
+      renderoiKalenteri();
+    }
+  }, 200);
+});
+
+function initGoogleAuth() {
+  if (!window.google) { setTimeout(initGoogleAuth, 500); return; }
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showToast('Kirjautuminen epäonnistui: ' + resp.error, 'error'); return; }
+      accessToken = resp.access_token;
+      const btn = document.getElementById('auth-btn');
+      btn.classList.add('signed-in');
+      btn.textContent = 'Kirjautunut';
+      await haeOmaEmail();
+      rakennaPisteTabit();
+      paivitaNavLabel();
+      await lataaVaraukset();
+    }
+  });
+  document.getElementById('auth-btn').addEventListener('click', () => {
+    if (!accessToken) tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+initGoogleAuth();
+
+async function haeOmaEmail() {
+  try {
+    const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { 'Authorization': 'Bearer ' + accessToken }
+    });
+    const data = await resp.json();
+    currentUserEmail = (data.email || '').toLowerCase();
+  } catch (e) {
+    currentUserEmail = null;
+  }
+}
+
+async function lataaVaraukset() {
+  const statusEl = document.getElementById('status-msg');
+  statusEl.style.display = 'block';
+  statusEl.className = '';
+  statusEl.textContent = 'Haetaan varauksia...';
+  document.getElementById('calendar-content').style.display = 'none';
+
+  try {
+    const url = WEBHOOK_URL + '?action=haeKaikkiVaraukset&token=' + encodeURIComponent(accessToken);
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (!data.ok) {
+      statusEl.className = 'error-msg';
+      statusEl.textContent = '🔒 ' + (data.error || 'Pääsy evätty');
+      return;
+    }
+
+    kaikkiVaraukset = data.varaukset || [];
+    statusEl.style.display = 'none';
+    document.getElementById('calendar-content').style.display = 'block';
+    renderoiKalenteri();
+    renderoiSivupalkki();
+
+  } catch (e) {
+    statusEl.className = 'error-msg';
+    statusEl.textContent = 'Hakuvirhe: ' + e.message;
+  }
+}
+</script>
+
+<script>
+// ── KALENTERIN PIIRTO ─────────────────────────────────────────
+function renderoiKalenteri() {
+  const cont = document.getElementById('calendar-content');
+  cont.innerHTML = '';
+
+  if (currentPiste === '__kaikki__') {
+    renderoiKaikkiPisteet(cont);
+  } else if (currentView === 'day') {
+    renderoiPaivaNakyma(cont, currentDate, currentPiste);
+  } else {
+    renderoiViikkoNakyma(cont, currentPiste);
+  }
+}
+
+function suodataPisteella(piste, alkuPvm, loppuPvm) {
+  return kaikkiVaraukset.filter(v => {
+    if (piste && v.piste !== piste) return false;
+    const pvm = (v.paivamaara || '').substring(0, 10);
+    if (alkuPvm && pvm < alkuPvm) return false;
+    if (loppuPvm && pvm > loppuPvm) return false;
+    return true;
+  });
+}
+
+// ── PÄIVÄNÄKYMÄ (yksi piste, taulukkona) ──────────────────────
+function renderoiPaivaNakyma(cont, paiva, piste) {
+  const avain = fmtDate(paiva);
+  const tyot = suodataPisteella(piste, avain, avain)
+    .sort((a, b) => (a.kellonaika || '').localeCompare(b.kellonaika || ''));
+
+  if (tyot.length === 0) {
+    cont.innerHTML = '<div class="day-empty">Ei töitä tälle päivälle.</div>';
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Klo</th><th>Varausnumero</th><th>Tyyppi</th><th>Rekisteri</th><th>Tila</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+  tyot.forEach(v => tbody.appendChild(renderoiTaulukkoRivi(v)));
+  cont.appendChild(table);
+}
+
+function renderoiTaulukkoRivi(v) {
+  const tr = document.createElement('tr');
+  tr.className = 'data-row';
+  const onLisatietoja = v.lisatiedot && v.lisatiedot.trim();
+  tr.innerHTML = `
+    <td data-label="Klo">${v.kellonaika || ''}</td>
+    <td data-label="Varausnumero">${v.varausnumero || ''}${onLisatietoja ? '<span class="note-dot" title="Lisätietoja">📝</span>' : ''}</td>
+    <td data-label="Tyyppi">${v.tyyppi || ''}</td>
+    <td data-label="Rekisteri">${v.rekisteri || ''}</td>
+    <td data-label="Tila"><span class="tila-badge ${tilaLuokka(v.tila)}">${v.tila || ''}</span></td>
+  `;
+  tr.addEventListener('click', () => avaaMuokkausModaali(v));
+  return tr;
+}
+
+// ── VIIKKONÄKYMÄ (yksi piste, 7 saraketta rinnakkain, ei scrollausta) ──
+// Laatikoiden koko lasketaan sen päivän mukaan jolla on eniten töitä,
+// jotta koko viikko mahtuu näytölle ilman scrollausta.
+function renderoiViikkoNakyma(cont, piste) {
+  const grid = document.createElement('div');
+  grid.id = 'week-grid';
+
+  const paivatJaTyot = [];
+  let maxTyotYhdellaPaivalla = 1;
+  for (let i = 0; i < 7; i++) {
+    const paiva = lisaaPaivia(currentWeekStart, i);
+    const avain = fmtDate(paiva);
+    const paivanTyot = suodataPisteella(piste, avain, avain)
+      .sort((a, b) => (a.kellonaika || '').localeCompare(b.kellonaika || ''));
+    paivatJaTyot.push({ paiva, paivanTyot });
+    if (paivanTyot.length > maxTyotYhdellaPaivalla) maxTyotYhdellaPaivalla = paivanTyot.length;
+  }
+
+  // Arvioitu sarakkeen korkeus pikseleinä (samasta CSS-kaavasta kuin #week-grid)
+  const kaytettavaKorkeus = Math.max(window.innerHeight - 220, 300);
+  // Jaetaan käytettävä korkeus töiden määrällä -> laatikon korkeus per työ.
+  // Rajataan järkeviin ääripäihin: ei koskaan liian iso eikä liian pieni.
+  let laatikkoKorkeus = Math.floor(kaytettavaKorkeus / maxTyotYhdellaPaivalla) - 4;
+  laatikkoKorkeus = Math.max(24, Math.min(54, laatikkoKorkeus));
+  const tiiviiMoodi = laatikkoKorkeus < 40; // pienemmässä koossa piilotetaan alarivi
+
+  paivatJaTyot.forEach(({ paiva, paivanTyot }) => {
+    const col = document.createElement('div');
+    col.className = 'week-col';
+
+    const otsikko = document.createElement('div');
+    otsikko.className = 'week-col-heading';
+    otsikko.textContent = paiva.toLocaleDateString('fi-FI', { weekday: 'short', day: 'numeric', month: 'numeric' });
+    otsikko.addEventListener('click', () => {
+      currentDate = paiva;
+      vaihdaNakyma('day');
+    });
+    col.appendChild(otsikko);
+
+    const body = document.createElement('div');
+    body.className = 'week-col-body';
+
+    if (paivanTyot.length === 0) {
+      const tyhja = document.createElement('div');
+      tyhja.className = 'day-empty';
+      tyhja.textContent = '—';
+      body.appendChild(tyhja);
+    } else {
+      paivanTyot.forEach(v => body.appendChild(renderoiTile(v, laatikkoKorkeus, tiiviiMoodi)));
+    }
+
+    col.appendChild(body);
+    grid.appendChild(col);
+  });
+
+  cont.appendChild(grid);
+}
+
+// korkeusPx ja tiivis ovat valinnaisia: kaikki pisteet -näkymä kutsuu ilman
+// niitä (käyttää CSS-oletuskokoa), viikkonäkymä antaa lasketun koon jotta
+// koko viikko mahtuu näytölle ilman scrollausta.
+function renderoiTile(v, korkeusPx, tiivis) {
+  const tile = document.createElement('div');
+  tile.className = 'week-tile ' + tileLuokka(v);
+  if (korkeusPx) {
+    tile.style.height = korkeusPx + 'px';
+    tile.style.display = 'flex';
+    tile.style.flexDirection = 'column';
+    tile.style.justifyContent = 'center';
+  }
+  const alarivi = v.tila === 'Poikkeama' ? 'Poikkeama' : (v.tila === 'Valmis' ? 'Valmis' : (v.tyyppi || ''));
+  if (tiivis) {
+    // Hyvin pieni laatikko: näytetään vain rekisteri/varausnumero, ei alariviä
+    tile.innerHTML = `<div class="week-tile-rek">${v.rekisteri || v.varausnumero || '—'}</div>`;
+    tile.title = (v.kellonaika || '') + ' · ' + alarivi;
+  } else {
+    tile.innerHTML = `
+      <div class="week-tile-rek">${v.rekisteri || v.varausnumero || '—'}</div>
+      <div class="week-tile-sub">${v.kellonaika || ''} · ${alarivi}</div>
+    `;
+  }
+  tile.addEventListener('click', () => avaaMuokkausModaali(v));
+  return tile;
+}
+
+// ── KAIKKI PISTEET -NÄKYMÄ (ryhmitelty pisteittäin) ───────────
+function renderoiKaikkiPisteet(cont) {
+  const alkuPvm = currentView === 'day' ? fmtDate(currentDate) : fmtDate(currentWeekStart);
+  const loppuPvm = currentView === 'day' ? fmtDate(currentDate) : fmtDate(lisaaPaivia(currentWeekStart, 6));
+
+  PISTEET.forEach(piste => {
+    const tyot = suodataPisteella(piste, alkuPvm, loppuPvm)
+      .sort((a, b) => {
+        const pvmVertailu = (a.paivamaara || '').localeCompare(b.paivamaara || '');
+        if (pvmVertailu !== 0) return pvmVertailu;
+        return (a.kellonaika || '').localeCompare(b.kellonaika || '');
+      });
+
+    if (tyot.length === 0) return; // ei näytetä tyhjiä pisteryhmiä kaikki-näkymässä
+
+    const group = document.createElement('div');
+    group.className = 'piste-group';
+    const heading = document.createElement('div');
+    heading.className = 'piste-group-heading';
+    heading.textContent = piste + ' (' + tyot.length + ')';
+    group.appendChild(heading);
+
+    const rivi = document.createElement('div');
+    rivi.className = 'week-tiles';
+    tyot.forEach(v => rivi.appendChild(renderoiTile(v)));
+    group.appendChild(rivi);
+
+    cont.appendChild(group);
+  });
+
+  if (cont.children.length === 0) {
+    cont.innerHTML = '<div class="day-empty">Ei töitä valitulla ajanjaksolla.</div>';
+  }
+}
+
+// ── SIVUPALKKI: POIKKEUKSET ────────────────────────────────────
+function renderoiSivupalkki() {
+  const list = document.getElementById('sidebar-list');
+  const poikkeamat = kaikkiVaraukset.filter(v => v.tila === 'Poikkeama');
+
+  if (poikkeamat.length === 0) {
+    list.innerHTML = '<div class="sidebar-empty">Ei poikkeamia juuri nyt.</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  poikkeamat.forEach(v => {
+    const item = document.createElement('div');
+    item.className = 'sidebar-item poikkeama';
+    item.innerHTML = `
+      <div class="sidebar-item-title">${v.rekisteri || v.varausnumero || '—'}</div>
+      <div>${v.piste || ''} · ${v.paivamaara || ''}</div>
+    `;
+    item.addEventListener('click', () => avaaMuokkausModaali(v));
+    list.appendChild(item);
+  });
+}
+</script>
+
+<script>
+// ── MUOKKAUSLOMAKE (modaali) ──────────────────────────────────
+function avaaMuokkausModaali(v) {
+  document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-title">${v.varausnumero || v.rekisteri || 'Varaus'}</div>
+      <div class="edit-form">
+        <div class="edit-field">
+          <label>Päivämäärä</label>
+          <input type="date" class="f-pvm" value="${(v.paivamaara || '').substring(0,10)}" />
+        </div>
+        <div class="edit-field">
+          <label>Kellonaika</label>
+          <input type="text" class="f-klo" value="${v.kellonaika || ''}" placeholder="HH:MM" />
+        </div>
+        <div class="edit-field">
+          <label>Tyyppi</label>
+          <select class="f-tyyppi">
+            ${TYYPIT.map(t => `<option value="${t}" ${t === v.tyyppi ? 'selected' : ''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="edit-field">
+          <label>Tila</label>
+          <select class="f-tila">
+            ${TILAT.map(t => `<option value="${t}" ${t === v.tila ? 'selected' : ''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="edit-field full">
+          <label>Lisätietoja</label>
+          <textarea class="f-lisatiedot">${v.lisatiedot || ''}</textarea>
+        </div>
+      </div>
+
+      <button class="btn-naytakaikki" type="button">▾ Näytä kaikki kentät</button>
+      <div class="kaikki-kentat" style="display:none;"></div>
+
+      <div class="edit-actions">
+        <button class="btn-save">💾 Tallenna</button>
+        <button class="btn-cancel">Peruuta muokkaus</button>
+        <button class="btn-peruuta">✕ Peruuta varaus</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  overlay.querySelector('.btn-cancel').addEventListener('click', () => overlay.remove());
+
+  // ── "Näytä kaikki kentät" -toggle ──────────────────────────
+  const naytaBtn = overlay.querySelector('.btn-naytakaikki');
+  const kaikkiKentatEl = overlay.querySelector('.kaikki-kentat');
+  let kaikkiKentatRakennettu = false;
+
+  naytaBtn.addEventListener('click', () => {
+    const auki = kaikkiKentatEl.style.display !== 'none';
+    if (auki) {
+      kaikkiKentatEl.style.display = 'none';
+      naytaBtn.textContent = '▾ Näytä kaikki kentät';
+    } else {
+      if (!kaikkiKentatRakennettu) {
+        kaikkiKentatEl.innerHTML = rakennaKaikkiKentatHtml(v);
+        kaikkiKentatRakennettu = true;
+      }
+      kaikkiKentatEl.style.display = 'block';
+      naytaBtn.textContent = '▴ Piilota kaikki kentät';
+    }
+  });
+
+  overlay.querySelector('.btn-save').addEventListener('click', () => {
+    const fields = {
+      'päivämäärä': overlay.querySelector('.f-pvm').value,
+      'kellonaika': overlay.querySelector('.f-klo').value,
+      'tyyppi': overlay.querySelector('.f-tyyppi').value,
+      'tila': overlay.querySelector('.f-tila').value,
+      'Lisätiedot': overlay.querySelector('.f-lisatiedot').value,
+    };
+
+    // Lisätään laajennetut kentät VAIN jos "Näytä kaikki kentät" on avattu
+    // (muuten kenttiä ei ole DOM:issa eikä niitä saa muutettuakaan)
+    // HUOM: rekisterinumero, VIN, merkki, malli ja vuosimalli EIVÄT ole
+    // muokattavissa tätä kautta (ks. muistiinpanot 12.7.2026) — jos auto on
+    // väärä, oikea tapa on peruuttaa varaus ja tehdä uusi.
+    if (kaikkiKentatRakennettu) {
+      const g = (cls) => { const el = overlay.querySelector(cls); return el ? el.value : undefined; };
+      fields['Hinta']                      = g('.f-hinta') ? parseFloat(g('.f-hinta').replace(',', '.')) || null : null;
+      fields['Lisäpalvelut']               = g('.f-lisapalvelut');
+      fields['Tarvikkeet']                 = g('.f-tarvikkeet');
+      fields['Leasing-yhtiö']              = g('.f-leasing-yhtio');
+      fields['Leasing-sopimusnumero']      = g('.f-leasing-sopimus');
+      fields['Kuljettajan nimi']           = g('.f-kuljettaja-nimi');
+      fields['Kuljettajan puhelin']        = g('.f-kuljettaja-puhelin');
+      fields['Työmääräysnumero']           = g('.f-tyomaarays');
+      fields['Autoliikkeen yhteyshenkilö'] = g('.f-yhteyshenkilo');
+    }
+
+    tallennaMuutos(v.id, fields, overlay);
+  });
+
+  overlay.querySelector('.btn-peruuta').addEventListener('click', () => {
+    if (!confirm('Peruutetaanko varaus ' + (v.varausnumero || '') + '?')) return;
+    tallennaMuutos(v.id, { 'tila': 'Peruutettu' }, overlay);
+  });
+}
+
+// Rakentaa "Näytä kaikki kentät" -osion HTML:n. Vakuutus- ja asiakastiedot
+// ovat VAIN LUKU -tilassa (ei input-kenttiä), koska niiden muokkaus vaatii
+// erillisen tallennuslogiikan (asiakas/auto-linkit, eri Airtable-taulu).
+function rakennaKaikkiKentatHtml(v) {
+  const auto = v.auto || {};
+  const asiakas = v.asiakas || {};
+  const vakuutus = v.vakuutus || null;
+
+  const asiakasNimi = asiakas.yritysNimi
+    ? asiakas.yritysNimi
+    : [asiakas.etunimi, asiakas.sukunimi].filter(Boolean).join(' ');
+
+  return `
+    <div class="kk-osio">
+      <div class="kk-otsikko">Ajoneuvo</div>
+      <div class="edit-form">
+        <div class="edit-field">
+          <label>Rekisteri</label>
+          <div class="kk-lukuarvo">${v.rekisteri || '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>VIN</label>
+          <div class="kk-lukuarvo">${auto.vin || '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>Merkki / malli</label>
+          <div class="kk-lukuarvo">${[auto.merkki, auto.malli].filter(Boolean).join(' ') || '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>Vuosimalli</label>
+          <div class="kk-lukuarvo">${auto.vuosimalli || '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>Lasikoodi (eurokoodi)</label>
+          <div class="kk-lukuarvo">${auto.eurokoodi || '—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kk-osio">
+      <div class="kk-otsikko">Asiakas</div>
+      <div class="edit-form">
+        <div class="edit-field">
+          <label>Nimi</label>
+          <div class="kk-lukuarvo">${asiakasNimi || '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>Puhelin</label>
+          <div class="kk-lukuarvo">${asiakas.puhelin || '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>Sähköposti</label>
+          <div class="kk-lukuarvo">${asiakas.sahkoposti || '—'}</div>
+        </div>
+        <div class="edit-field full">
+          <label>Osoite</label>
+          <div class="kk-lukuarvo">${[asiakas.osoite, asiakas.postinumero, asiakas.kaupunki].filter(Boolean).join(', ') || '—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kk-osio">
+      <div class="kk-otsikko">Autoliike / leasing</div>
+      <div class="edit-form">
+        <div class="edit-field">
+          <label>Leasing-yhtiö</label>
+          <input type="text" class="f-leasing-yhtio" value="${v.leasingYhtio || ''}" />
+        </div>
+        <div class="edit-field">
+          <label>Leasing-sopimusnumero</label>
+          <input type="text" class="f-leasing-sopimus" value="${v.leasingSopimus || ''}" />
+        </div>
+        <div class="edit-field">
+          <label>Kuljettajan nimi</label>
+          <input type="text" class="f-kuljettaja-nimi" value="${v.kuljettajaNimi || ''}" />
+        </div>
+        <div class="edit-field">
+          <label>Kuljettajan puhelin</label>
+          <input type="text" class="f-kuljettaja-puhelin" value="${v.kuljettajaPuhelin || ''}" />
+        </div>
+        <div class="edit-field">
+          <label>Työmääräysnumero</label>
+          <input type="text" class="f-tyomaarays" value="${v.tyomaarays || ''}" />
+        </div>
+        <div class="edit-field">
+          <label>Yhteyshenkilö</label>
+          <input type="text" class="f-yhteyshenkilo" value="${v.yhteyshenkilo || ''}" />
+        </div>
+      </div>
+    </div>
+
+    <div class="kk-osio">
+      <div class="kk-otsikko">Tarvikkeet, hinta ja lisäpalvelut</div>
+      <div class="edit-form">
+        <div class="edit-field">
+          <label>Hinta (€)</label>
+          <input type="text" class="f-hinta" value="${v.hinta || ''}" />
+        </div>
+        <div class="edit-field">
+          <label>Lisäpalvelut</label>
+          <input type="text" class="f-lisapalvelut" value="${v.lisapalvelut || ''}" />
+        </div>
+        <div class="edit-field full">
+          <label>Tarvikkeet</label>
+          <textarea class="f-tarvikkeet">${v.tarvikkeet || ''}</textarea>
+        </div>
+      </div>
+    </div>
+
+    ${vakuutus ? `
+    <div class="kk-osio">
+      <div class="kk-otsikko">Vakuutus (vain luku)</div>
+      <div class="edit-form">
+        <div class="edit-field">
+          <label>Yhtiö</label>
+          <div class="kk-lukuarvo">${vakuutus.yhtio || '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>Vahinkotunnus</label>
+          <div class="kk-lukuarvo">${vakuutus.vahinkotunnus || '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>Vahinkopäivä</label>
+          <div class="kk-lukuarvo">${vakuutus.vahinkopaiva || '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>Omavastuu</label>
+          <div class="kk-lukuarvo">${vakuutus.omavastuu !== '' ? vakuutus.omavastuu + ' €' : '—'}</div>
+        </div>
+        <div class="edit-field">
+          <label>Tarkistettu</label>
+          <div class="kk-lukuarvo">${vakuutus.tarkistettu ? 'Kyllä' : 'Ei'}</div>
+        </div>
+      </div>
+    </div>` : ''}
+  `;
+}
+
+async function tallennaMuutos(id, fields, overlay) {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?action=paivitaVaraus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ token: accessToken, id: id, fields: fields })
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Tallennus epäonnistui');
+
+    const idx = kaikkiVaraukset.findIndex(x => x.id === id);
+    if (idx !== -1) {
+      kaikkiVaraukset[idx] = Object.assign({}, kaikkiVaraukset[idx], {
+        paivamaara: fields['päivämäärä'] !== undefined ? fields['päivämäärä'] : kaikkiVaraukset[idx].paivamaara,
+        kellonaika: fields['kellonaika'] !== undefined ? fields['kellonaika'] : kaikkiVaraukset[idx].kellonaika,
+        tyyppi: fields['tyyppi'] !== undefined ? fields['tyyppi'] : kaikkiVaraukset[idx].tyyppi,
+        tila: fields['tila'] !== undefined ? fields['tila'] : kaikkiVaraukset[idx].tila,
+        lisatiedot: fields['Lisätiedot'] !== undefined ? fields['Lisätiedot'] : kaikkiVaraukset[idx].lisatiedot,
+      });
+    }
+    overlay.remove();
+    renderoiKalenteri();
+    renderoiSivupalkki();
+    showToast('Tallennettu', 'success');
+  } catch (e) {
+    showToast('Virhe: ' + e.message, 'error');
+  }
+}
+</script>
+
+</body>
+</html>
