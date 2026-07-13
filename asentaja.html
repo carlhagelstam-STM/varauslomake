@@ -225,6 +225,25 @@
   .tag.tyyppi-reklamaatio { background: #3a1414; border-color: #dc2626; color: #fca5a5; }
   .tag.tyyppi-muu { background: var(--surface2); border-color: var(--border2); color: var(--text2); }
 
+  .btn-lisatiedot-toggle {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    color: var(--text3); font-size: 12px; font-family: 'Manrope', sans-serif;
+    padding: 4px 0; margin-bottom: 4px; cursor: pointer;
+  }
+  .btn-lisatiedot-toggle:hover { color: var(--text2); }
+  .job-lisatiedot-lista {
+    display: none; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 10px; margin-bottom: 10px;
+  }
+  .job-lisatiedot-lista.open { display: block; }
+  .job-lisatiedot-rivi {
+    display: flex; justify-content: space-between; gap: 10px;
+    font-size: 12px; padding: 4px 0; border-top: 1px solid var(--border);
+  }
+  .job-lisatiedot-rivi:first-child { border-top: none; }
+  .job-lisatiedot-rivi span:first-child { color: var(--text3); flex-shrink: 0; }
+  .job-lisatiedot-rivi span:last-child { color: var(--text); text-align: right; }
+
   .badge-tyon-alla {
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--success-light); color: var(--success);
@@ -968,9 +987,23 @@ function renderJobCard(tyo) {
   const onLisatietoja = tyo.lisatiedot && tyo.lisatiedot.trim();
   const tyyppiLuokka = 'tyyppi-' + (tyo.tyyppi || 'muu').toLowerCase();
 
-  // HUOM: näkyvyystaso (suppea/keski/laaja) ei vielä vaikuta mihinkään —
-  // tausta ei vielä hae mitään lisätietoja tasoittain. Rakenne on tässä
-  // valmiina sitä varten kun päätetään mitä esim. "Laaja" oikeasti näyttäisi.
+  // UUSI 13.7.2026: näkyvyystason mukaan Koodi.gs palauttaa eri kentät —
+  // rakennetaan "Näytä lisätiedot" -lista vain niistä kentistä joita
+  // oikeasti tuli mukana (tyhjät/puuttuvat jätetään pois listasta kokonaan,
+  // ei näytetä esim. "Puhelin: -").
+  const lisatietoRivit = [
+    tyo.hinta != null && tyo.hinta !== '' ? ['Hinta', Number(tyo.hinta).toFixed(2).replace('.', ',') + ' €'] : null,
+    tyo.autoliikeMyyja ? ['Autoliike/myyjä', tyo.autoliikeMyyja] : null,
+    tyo.lisapalvelut ? ['Lisäpalvelut', tyo.lisapalvelut] : null,
+    tyo.noutoPalautusosoite ? ['Nouto/palautus', tyo.noutoPalautusosoite] : null,
+    tyo.asiakkaanPuhelin ? ['Asiakkaan puhelin', tyo.asiakkaanPuhelin] : null,
+    tyo.yritys ? ['Yritys', tyo.yritys] : null,
+    tyo.vakuutusyhtio ? ['Vakuutusyhtiö', tyo.vakuutusyhtio] : null,
+    tyo.vahinkopaiva ? ['Vahinkopäivä', tyo.vahinkopaiva] : null,
+    tyo.omavastuu != null && tyo.omavastuu !== '' ? ['Omavastuu', Number(tyo.omavastuu).toFixed(2).replace('.', ',') + ' €'] : null,
+    tyo.vahinkotunnus ? ['Vahinkotunnus', tyo.vahinkotunnus] : null,
+  ].filter(Boolean);
+
   card.innerHTML = `
     <div class="job-top">
       <div class="job-piste">${tyo.piste}</div>
@@ -984,6 +1017,14 @@ function renderJobCard(tyo) {
       ${(tyo.eurokoodi && (tyo.tyyppi || '').toLowerCase() === 'vaihto') ? `<span class="tag">🪟 ${tyo.eurokoodi}</span>` : ''}
       ${onLisatietoja ? `<span class="tag has-note" style="cursor:pointer;">📝 Lisätietoja</span>` : ''}
     </div>
+    ${lisatietoRivit.length ? `
+      <button type="button" class="btn-lisatiedot-toggle">▾ Näytä lisätiedot</button>
+      <div class="job-lisatiedot-lista">
+        ${lisatietoRivit.map(([otsikko, arvo]) => `
+          <div class="job-lisatiedot-rivi"><span>${otsikko}</span><span>${arvo}</span></div>
+        `).join('')}
+      </div>
+    ` : ''}
     <div class="action-area" style="${tyo.tila === 'Työn alla' ? '' : 'display:none;'}"></div>
   `;
 
@@ -994,6 +1035,16 @@ function renderJobCard(tyo) {
     lisatietoTag.addEventListener('click', (e) => {
       e.stopPropagation();
       naytaLisatietoPopupPakotettu(tyo.lisatiedot);
+    });
+  }
+
+  const lisatietoToggle = card.querySelector('.btn-lisatiedot-toggle');
+  if (lisatietoToggle) {
+    lisatietoToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const lista = card.querySelector('.job-lisatiedot-lista');
+      const auki = lista.classList.toggle('open');
+      lisatietoToggle.textContent = (auki ? '▴ Piilota lisätiedot' : '▾ Näytä lisätiedot');
     });
   }
 
