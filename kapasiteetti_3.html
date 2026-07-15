@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM Kapasiteetti</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e38;
+    --border2: #3a3f4c;
+    --text: #e8e9ec;
+    --text-dim: #9aa0ac;
+    --accent: #e0393e;
+    --slot-empty-border: #3a3f4c;
+    --varattu: #4a6fa5;
+    --tyon-alla: #d9a441;
+    --valmis: #4caf7a;
+    --poikkeama: #e0393e;
+    --ylimaara-bg: #241a1a;
+    --ylimaara-border: #5a2e2e;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: 600;
+  }
+  header a {
+    color: inherit;
+    text-decoration: none;
+    font-size: 13px;
+  }
+  #paivamaara-rivi {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #paivamaara-rivi button {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 5px 11px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #paivamaara-rivi button:hover { background: var(--border); }
+  #paivamaara-otsikko {
+    font-size: 15px;
+    font-weight: 600;
+    min-width: 150px;
+    text-align: center;
+  }
+  #status-msg {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px;
+  }
+
+  /* Pääalue täyttää kaiken jäljellä olevan tilan */
+  #pisteet-grid {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .piste-kortti {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .piste-otsikko {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+  }
+  .piste-nimi {
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .piste-alaotsikko {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* Sarakkeet täyttävät koko kortin korkeuden */
+  .sarakkeet-rivi {
+    display: flex;
+    gap: 5px;
+    flex: 1;
+    min-height: 0;
+  }
+  .sarake {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 0;
+  }
+  .sarake-otsikko {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+
+  /* Ruutujen säiliö: täyttää sarakkeen koko korkeuden, ruudut jakavat tilan
+     FLEX-GROW:lla joka on suhteessa työn kestoon (tyhjät ruudut = flex-grow 1,
+     eli kaikki tyhjät AINA samankokoisia keskenään). */
+  .ruudut {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-height: 0;
+  }
+  .slot {
+    border-radius: 5px;
+    padding: 4px;
+    font-size: 11px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.2;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .slot-tyhja {
+    border: 1px dashed var(--slot-empty-border);
+    color: var(--text-dim);
+    flex-grow: 1; /* kaikki tyhjät ruudut aina samankokoisia */
+  }
+  .slot-varattu    { background: var(--varattu);   color: #fff; }
+  .slot-tyon-alla  { background: var(--tyon-alla); color: #1a1a1a; }
+  .slot-valmis     { background: var(--valmis);    color: #0d1f14; }
+  .slot-poikkeama  { background: var(--poikkeama); color: #fff; }
+  .slot-rek {
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .slot-aika {
+    opacity: 0.85;
+    font-size: 10px;
+  }
+
+  /* UUSI 15.7.2026: Puuttuvat resurssit -palkki koko sivun alaosassa,
+     kokoaa KAIKKIEN pisteiden ylimääräiset/ei-mahtuneet työt yhteen. */
+  #puuttuvat-resurssit {
+    flex-shrink: 0;
+    display: none;
+    background: var(--ylimaara-bg);
+    border-top: 1px solid var(--ylimaara-border);
+    padding: 8px 12px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  #puuttuvat-resurssit-otsikko {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  #puuttuvat-resurssit-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .puuttuva-kortti {
+    background: var(--panel);
+    border: 1px solid var(--ylimaara-border);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .puuttuva-piste {
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .ei-asentajia {
+    color: var(--text-dim);
+    font-size: 12px;
+    text-align: center;
+    padding: 10px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Kapasiteetti — kaikki pisteet</h1>
+  <div>
+    <a href="aloitus.html" style="margin-right:14px;">🏠 Etusivu</a>
+    <a href="#" onclick="kirjauduUlosJaOhjaa(); return false;">🚪 Kirjaudu ulos</a>
+  </div>
+</header>
+
+<div id="paivamaara-rivi">
+  <button id="edellinen-btn" title="Edellinen päivä">‹</button>
+  <div id="paivamaara-otsikko">—</div>
+  <button id="seuraava-btn" title="Seuraava päivä">›</button>
+  <button id="tanaan-btn" title="Tänään">Tänään</button>
+  <button id="paivita-btn" title="Päivitä">⟳</button>
+</div>
+
+<div id="status-msg">Ladataan kapasiteettia...</div>
+<div id="pisteet-grid"></div>
+<div id="puuttuvat-resurssit">
+  <div id="puuttuvat-resurssit-otsikko">⚠️ Puuttuvat resurssit</div>
+  <div id="puuttuvat-resurssit-lista"></div>
+</div>
+
+<script>
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwJD34dyJhcwvp0l2JDwCkB2cVgM2Ue9pWRYQ1jp9xh8z_k9maSv7bkt69ZJgfkc-pN/exec';
+
+let accessToken = null;
+let nykyinenPvm = new Date();
+
+function kirjauduUlosJaOhjaa() {
+  sessionStorage.removeItem('stm_istunto');
+  sessionStorage.removeItem('stm_email');
+  window.location.href = 'index.html';
+}
+
+function tarkistaIstuntoVirhe(vastausData) {
+  if (vastausData && vastausData.ok === false &&
+      /kirjautuminen|istunto/i.test(vastausData.error || '')) {
+    document.getElementById('status-msg').textContent = 'Istunto on vanhentunut, siirretään kirjautumaan...';
+    document.getElementById('status-msg').style.display = 'block';
+    document.getElementById('pisteet-grid').style.display = 'none';
+    setTimeout(kirjauduUlosJaOhjaa, 1500);
+    return true;
+  }
+  return false;
+}
+
+function fmtDate(d) {
+  const vuosi = d.getFullYear();
+  const kk = String(d.getMonth() + 1).padStart(2, '0');
+  const pv = String(d.getDate()).padStart(2, '0');
+  return `${vuosi}-${kk}-${pv}`;
+}
+
+function fmtOtsikko(d) {
+  const paivat = ['Sunnuntai','Maanantai','Tiistai','Keskiviikko','Torstai','Perjantai','Lauantai'];
+  return `${paivat[d.getDay()]} ${fmtDate(d)}`;
+}
+
+const TILA_LUOKKA = {
+  'Varattu':   'slot-varattu',
+  'Työn alla': 'slot-tyon-alla',
+  'Valmis':    'slot-valmis',
+  'Poikkeama': 'slot-poikkeama',
+};
+
+// Luo yhden työruudun. flexGrow on suhteessa työn kestoon (minuutteina) —
+// pidempi työ saa suhteessa enemmän pystytilaa kuin lyhyt työ, mutta
+// molemmat ovat aina VÄHINTÄÄN yhtä isoja kuin tyhjä ruutu (flex-grow: 1),
+// jottei erittäin lyhyt työ (esim. 20 min) litisty lukukelvottomaksi.
+function luoTyoSlot(tyo) {
+  const slot = document.createElement('div');
+  const luokka = TILA_LUOKKA[tyo.tila] || 'slot-varattu';
+  slot.className = 'slot ' + luokka;
+  // kestoMin/60 antaa suhteellisen painoarvon; minimi 1 jottei koskaan
+  // pienene tyhjää ruutua (flex-grow:1) pienemmäksi.
+  const paino = Math.max(1, (tyo.kestoMin || 60) / 60);
+  slot.style.flexGrow = paino;
+
+  const rek = document.createElement('div');
+  rek.className = 'slot-rek';
+  rek.textContent = tyo.rekisteri || '—';
+  const aika = document.createElement('div');
+  aika.className = 'slot-aika';
+  aika.textContent = tyo.kellonaika + (tyo.tyyppi ? ' · ' + tyo.tyyppi : '');
+  slot.appendChild(rek);
+  slot.appendChild(aika);
+  return slot;
+}
+
+function renderoiPisteKortti(pisteNimi, data) {
+  const kortti = document.createElement('div');
+  kortti.className = 'piste-kortti';
+
+  const otsikko = document.createElement('div');
+  otsikko.className = 'piste-otsikko';
+  const nimiEl = document.createElement('div');
+  nimiEl.className = 'piste-nimi';
+  nimiEl.textContent = pisteNimi;
+  otsikko.appendChild(nimiEl);
+
+  if (data && data.ok) {
+    const alaotsikko = document.createElement('div');
+    alaotsikko.className = 'piste-alaotsikko';
+    alaotsikko.textContent = data.sarakkeidenMaara + ' asentajaa';
+    otsikko.appendChild(alaotsikko);
+  }
+  kortti.appendChild(otsikko);
+
+  if (!data || !data.ok) {
+    const virhe = document.createElement('div');
+    virhe.className = 'ei-asentajia';
+    virhe.textContent = (data && data.error) || 'Ei tietoa';
+    kortti.appendChild(virhe);
+    return kortti;
+  }
+
+  if (data.sarakkeidenMaara === 0) {
+    const eiAsentajia = document.createElement('div');
+    eiAsentajia.className = 'ei-asentajia';
+    eiAsentajia.textContent = 'Ei asentajia käytettävissä tänään';
+    kortti.appendChild(eiAsentajia);
+    return kortti;
+  }
+
+  const rivi = document.createElement('div');
+  rivi.className = 'sarakkeet-rivi';
+
+  data.sarakkeet.forEach(sarake => {
+    const sarakeEl = document.createElement('div');
+    sarakeEl.className = 'sarake';
+
+    const sarakeOtsikko = document.createElement('div');
+    sarakeOtsikko.className = 'sarake-otsikko';
+    sarakeOtsikko.textContent = sarake.asentaja;
+    sarakeEl.appendChild(sarakeOtsikko);
+
+    // UUSI 15.7.2026: ruutut-säiliö näyttää TÄSMÄLLEEN sarake.ruutumaara
+    // verran ruutuja — täytetyt työruudut ensin (aikajärjestyksessä),
+    // loput tyhjinä. Kaikki tyhjät ruudut ovat AINA samankokoisia
+    // (flex-grow: 1 CSS:ssä), täytetyt ruudut skaalautuvat työn keston mukaan.
+    const ruudut = document.createElement('div');
+    ruudut.className = 'ruudut';
+
+    sarake.tyot.forEach(tyo => {
+      ruudut.appendChild(luoTyoSlot(tyo));
+    });
+
+    const vapaita = sarake.vapaidenRuutujenMaara != null
+      ? sarake.vapaidenRuutujenMaara
+      : Math.max(0, (sarake.ruutumaara || 0) - sarake.tyot.length);
+
+    for (let i = 0; i < vapaita; i++) {
+      const tyhja = document.createElement('div');
+      tyhja.className = 'slot slot-tyhja';
+      tyhja.textContent = 'Vapaa';
+      ruudut.appendChild(tyhja);
+    }
+
+    sarakeEl.appendChild(ruudut);
+    rivi.appendChild(sarakeEl);
+  });
+
+  kortti.appendChild(rivi);
+
+  // HUOM 15.7.2026: korttikohtainen ylimäärä-alue POISTETTU tästä —
+  // kaikkien pisteiden puuttuvat/ylimääräiset työt näytetään nyt YHDESSÄ
+  // yhteisessä "Puuttuvat resurssit" -palkissa sivun alaosassa
+  // (ks. renderoiPuuttuvatResurssit-funktio), ei enää jokaisen kortin
+  // sisällä erikseen.
+
+  return kortti;
+}
+
+// UUSI 15.7.2026: renderöi yhteisen "Puuttuvat resurssit" -palkin kaikkien
+// pisteiden ylimääräisistä/ei-mahtuneista töistä (data.kaikkiYlimaaraiset,
+// backendistä koottu — jokaisella työllä mukana .piste-kenttä).
+function renderoiPuuttuvatResurssit(kaikkiYlimaaraiset) {
+  const alue = document.getElementById('puuttuvat-resurssit');
+  const lista = document.getElementById('puuttuvat-resurssit-lista');
+  lista.innerHTML = '';
+
+  if (!kaikkiYlimaaraiset || kaikkiYlimaaraiset.length === 0) {
+    alue.style.display = 'none';
+    return;
+  }
+
+  document.getElementById('puuttuvat-resurssit-otsikko').textContent =
+    '⚠️ Puuttuvat resurssit — ' + kaikkiYlimaaraiset.length + ' työtä';
+
+  kaikkiYlimaaraiset.forEach(tyo => {
+    const kortti = document.createElement('div');
+    kortti.className = 'puuttuva-kortti';
+    const piste = document.createElement('span');
+    piste.className = 'puuttuva-piste';
+    piste.textContent = tyo.piste;
+    kortti.appendChild(piste);
+    const loput = document.createElement('span');
+    loput.textContent = tyo.kellonaika + ' · ' + (tyo.rekisteri || '—') +
+      (tyo.tyyppi ? ' · ' + tyo.tyyppi : '');
+    kortti.appendChild(loput);
+    lista.appendChild(kortti);
+  });
+
+  alue.style.display = 'block';
+}
+
+async function lataaKapasiteetti() {
+  if (!accessToken) return;
+  const statusMsg = document.getElementById('status-msg');
+  const grid = document.getElementById('pisteet-grid');
+  const otsikko = document.getElementById('paivamaara-otsikko');
+
+  otsikko.textContent = fmtOtsikko(nykyinenPvm);
+  statusMsg.textContent = 'Ladataan kapasiteettia...';
+  statusMsg.style.display = 'block';
+  grid.style.display = 'none';
+
+  try {
+    const url = WEBHOOK_URL + '?action=haeKapasiteettiLandingPage&token=' + encodeURIComponent(accessToken)
+      + '&paivamaara=' + fmtDate(nykyinenPvm);
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (tarkistaIstuntoVirhe(data)) return;
+    if (!data.ok) {
+      statusMsg.textContent = 'Virhe: ' + (data.error || 'tuntematon');
+      return;
+    }
+
+    grid.innerHTML = '';
+    Object.keys(data.pisteet).forEach(pisteNimi => {
+      grid.appendChild(renderoiPisteKortti(pisteNimi, data.pisteet[pisteNimi]));
+    });
+    renderoiPuuttuvatResurssit(data.kaikkiYlimaaraiset);
+
+    statusMsg.style.display = 'none';
+    grid.style.display = 'grid';
+
+  } catch (e) {
+    statusMsg.textContent = 'Hakuvirhe: ' + e.message;
+  }
+}
+
+document.getElementById('edellinen-btn').addEventListener('click', () => {
+  nykyinenPvm.setDate(nykyinenPvm.getDate() - 1);
+  lataaKapasiteetti();
+});
+document.getElementById('seuraava-btn').addEventListener('click', () => {
+  nykyinenPvm.setDate(nykyinenPvm.getDate() + 1);
+  lataaKapasiteetti();
+});
+document.getElementById('tanaan-btn').addEventListener('click', () => {
+  nykyinenPvm = new Date();
+  lataaKapasiteetti();
+});
+document.getElementById('paivita-btn').addEventListener('click', lataaKapasiteetti);
+
+function initGoogleAuth() {
+  const istuntoId = sessionStorage.getItem('stm_istunto');
+  if (!istuntoId) {
+    window.location.href = 'index.html';
+    return;
+  }
+  accessToken = istuntoId;
+  lataaKapasiteetti();
+}
+initGoogleAuth();
+</script>
+
+</body>
+</html>
