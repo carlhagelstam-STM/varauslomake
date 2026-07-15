@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM Kapasiteetti</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e38;
+    --border2: #3a3f4c;
+    --text: #e8e9ec;
+    --text-dim: #9aa0ac;
+    --accent: #e0393e;
+    --slot-empty-border: #3a3f4c;
+    --varattu: #4a6fa5;
+    --tyon-alla: #d9a441;
+    --valmis: #4caf7a;
+    --poikkeama: #e0393e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 18px;
+    margin: 0;
+    font-weight: 600;
+  }
+  header a {
+    color: inherit;
+    text-decoration: none;
+    font-size: 14px;
+  }
+  #paivamaara-rivi {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  #paivamaara-rivi button {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  #paivamaara-rivi button:hover { background: var(--border); }
+  #paivamaara-otsikko {
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 160px;
+    text-align: center;
+  }
+  #status-msg {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px;
+  }
+  #pisteet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    padding: 16px;
+  }
+  .piste-kortti {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .piste-otsikko {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .piste-nimi {
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .piste-alaotsikko {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .sarakkeet-rivi {
+    display: flex;
+    gap: 6px;
+  }
+  .sarake {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .sarake-otsikko {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .slot {
+    border-radius: 5px;
+    padding: 5px 4px;
+    font-size: 11px;
+    text-align: center;
+    min-height: 34px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.25;
+  }
+  .slot-tyhja {
+    border: 1px dashed var(--slot-empty-border);
+    color: var(--text-dim);
+  }
+  .slot-varattu    { background: var(--varattu);   color: #fff; }
+  .slot-tyon-alla  { background: var(--tyon-alla); color: #1a1a1a; }
+  .slot-valmis     { background: var(--valmis);    color: #0d1f14; }
+  .slot-poikkeama  { background: var(--poikkeama); color: #fff; }
+  .slot-rek {
+    font-weight: 700;
+  }
+  .slot-aika {
+    opacity: 0.85;
+    font-size: 10px;
+  }
+  .katkoviiva {
+    border-top: 1px dashed var(--border2);
+    margin: 8px 0 6px 0;
+    padding-top: 2px;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+  .ei-asentajia {
+    color: var(--text-dim);
+    font-size: 12px;
+    text-align: center;
+    padding: 10px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Kapasiteetti — kaikki pisteet</h1>
+  <div>
+    <a href="aloitus.html" style="margin-right:14px;">🏠 Etusivu</a>
+    <a href="#" onclick="kirjauduUlosJaOhjaa(); return false;">🚪 Kirjaudu ulos</a>
+  </div>
+</header>
+
+<div id="paivamaara-rivi">
+  <button id="edellinen-btn" title="Edellinen päivä">‹</button>
+  <div id="paivamaara-otsikko">—</div>
+  <button id="seuraava-btn" title="Seuraava päivä">›</button>
+  <button id="tanaan-btn" title="Tänään">Tänään</button>
+  <button id="paivita-btn" title="Päivitä">⟳</button>
+</div>
+
+<div id="status-msg">Ladataan kapasiteettia...</div>
+<div id="pisteet-grid" style="display:none;"></div>
+
+<script>
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwJD34dyJhcwvp0l2JDwCkB2cVgM2Ue9pWRYQ1jp9xh8z_k9maSv7bkt69ZJgfkc-pN/exec';
+
+let accessToken = null;
+let nykyinenPvm = new Date();
+
+function kirjauduUlosJaOhjaa() {
+  sessionStorage.removeItem('stm_istunto');
+  sessionStorage.removeItem('stm_email');
+  window.location.href = 'index.html';
+}
+
+function tarkistaIstuntoVirhe(vastausData) {
+  if (vastausData && vastausData.ok === false &&
+      /kirjautuminen|istunto/i.test(vastausData.error || '')) {
+    document.getElementById('status-msg').textContent = 'Istunto on vanhentunut, siirretään kirjautumaan...';
+    document.getElementById('status-msg').style.display = 'block';
+    document.getElementById('pisteet-grid').style.display = 'none';
+    setTimeout(kirjauduUlosJaOhjaa, 1500);
+    return true;
+  }
+  return false;
+}
+
+function fmtDate(d) {
+  const vuosi = d.getFullYear();
+  const kk = String(d.getMonth() + 1).padStart(2, '0');
+  const pv = String(d.getDate()).padStart(2, '0');
+  return `${vuosi}-${kk}-${pv}`;
+}
+
+function fmtOtsikko(d) {
+  const paivat = ['Sunnuntai','Maanantai','Tiistai','Keskiviikko','Torstai','Perjantai','Lauantai'];
+  return `${paivat[d.getDay()]} ${fmtDate(d)}`;
+}
+
+const TILA_LUOKKA = {
+  'Varattu':   'slot-varattu',
+  'Työn alla': 'slot-tyon-alla',
+  'Valmis':    'slot-valmis',
+  'Poikkeama': 'slot-poikkeama',
+};
+
+function renderoiPisteKortti(pisteNimi, data) {
+  const kortti = document.createElement('div');
+  kortti.className = 'piste-kortti';
+
+  const otsikko = document.createElement('div');
+  otsikko.className = 'piste-otsikko';
+  const nimiEl = document.createElement('div');
+  nimiEl.className = 'piste-nimi';
+  nimiEl.textContent = pisteNimi;
+  otsikko.appendChild(nimiEl);
+
+  if (data && data.ok) {
+    const alaotsikko = document.createElement('div');
+    alaotsikko.className = 'piste-alaotsikko';
+    alaotsikko.textContent = data.sarakkeidenMaara + ' asentajaa';
+    otsikko.appendChild(alaotsikko);
+  }
+  kortti.appendChild(otsikko);
+
+  if (!data || !data.ok) {
+    const virhe = document.createElement('div');
+    virhe.className = 'ei-asentajia';
+    virhe.textContent = (data && data.error) || 'Ei tietoa';
+    kortti.appendChild(virhe);
+    return kortti;
+  }
+
+  if (data.sarakkeidenMaara === 0) {
+    const eiAsentajia = document.createElement('div');
+    eiAsentajia.className = 'ei-asentajia';
+    eiAsentajia.textContent = 'Ei asentajia käytettävissä tänään';
+    kortti.appendChild(eiAsentajia);
+    return kortti;
+  }
+
+  const rivi = document.createElement('div');
+  rivi.className = 'sarakkeet-rivi';
+
+  data.sarakkeet.forEach(sarake => {
+    const sarakeEl = document.createElement('div');
+    sarakeEl.className = 'sarake';
+
+    const sarakeOtsikko = document.createElement('div');
+    sarakeOtsikko.className = 'sarake-otsikko';
+    sarakeOtsikko.textContent = sarake.asentaja;
+    sarakeEl.appendChild(sarakeOtsikko);
+
+    if (sarake.tyot.length === 0) {
+      const tyhja = document.createElement('div');
+      tyhja.className = 'slot slot-tyhja';
+      tyhja.textContent = 'Vapaa';
+      sarakeEl.appendChild(tyhja);
+    } else {
+      sarake.tyot.forEach(tyo => {
+        const slot = document.createElement('div');
+        slot.className = 'slot ' + (TILA_LUOKKA[tyo.tila] || 'slot-varattu');
+        const rek = document.createElement('div');
+        rek.className = 'slot-rek';
+        rek.textContent = tyo.rekisteri || '—';
+        const aika = document.createElement('div');
+        aika.className = 'slot-aika';
+        aika.textContent = tyo.kellonaika + (tyo.tyyppi ? ' · ' + tyo.tyyppi : '');
+        slot.appendChild(rek);
+        slot.appendChild(aika);
+        sarakeEl.appendChild(slot);
+      });
+    }
+    rivi.appendChild(sarakeEl);
+  });
+
+  kortti.appendChild(rivi);
+
+  // Katkoviivan alapuoli: ylimääräiset työt jotka eivät mahtuneet sarakkeisiin.
+  // Tässä ensimmäisessä versiossa vain NÄYTETÄÄN — lisäystoiminto tulee myöhemmin.
+  if (data.ylimaaraiset && data.ylimaaraiset.length > 0) {
+    const katko = document.createElement('div');
+    katko.className = 'katkoviiva';
+    katko.textContent = '⚠️ ' + data.ylimaaraiset.length + ' työtä ylikapasiteetissa';
+    kortti.appendChild(katko);
+
+    data.ylimaaraiset.forEach(tyo => {
+      const slot = document.createElement('div');
+      slot.className = 'slot ' + (TILA_LUOKKA[tyo.tila] || 'slot-varattu');
+      slot.style.marginBottom = '5px';
+      const rek = document.createElement('div');
+      rek.className = 'slot-rek';
+      rek.textContent = tyo.rekisteri || '—';
+      const aika = document.createElement('div');
+      aika.className = 'slot-aika';
+      aika.textContent = tyo.kellonaika + (tyo.tyyppi ? ' · ' + tyo.tyyppi : '');
+      slot.appendChild(rek);
+      slot.appendChild(aika);
+      kortti.appendChild(slot);
+    });
+  }
+
+  return kortti;
+}
+
+async function lataaKapasiteetti() {
+  if (!accessToken) return;
+  const statusMsg = document.getElementById('status-msg');
+  const grid = document.getElementById('pisteet-grid');
+  const otsikko = document.getElementById('paivamaara-otsikko');
+
+  otsikko.textContent = fmtOtsikko(nykyinenPvm);
+  statusMsg.textContent = 'Ladataan kapasiteettia...';
+  statusMsg.style.display = 'block';
+  grid.style.display = 'none';
+
+  try {
+    const url = WEBHOOK_URL + '?action=haeKapasiteettiLandingPage&token=' + encodeURIComponent(accessToken)
+      + '&paivamaara=' + fmtDate(nykyinenPvm);
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (tarkistaIstuntoVirhe(data)) return;
+    if (!data.ok) {
+      statusMsg.textContent = 'Virhe: ' + (data.error || 'tuntematon');
+      return;
+    }
+
+    grid.innerHTML = '';
+    Object.keys(data.pisteet).forEach(pisteNimi => {
+      grid.appendChild(renderoiPisteKortti(pisteNimi, data.pisteet[pisteNimi]));
+    });
+
+    statusMsg.style.display = 'none';
+    grid.style.display = 'grid';
+
+  } catch (e) {
+    statusMsg.textContent = 'Hakuvirhe: ' + e.message;
+  }
+}
+
+document.getElementById('edellinen-btn').addEventListener('click', () => {
+  nykyinenPvm.setDate(nykyinenPvm.getDate() - 1);
+  lataaKapasiteetti();
+});
+document.getElementById('seuraava-btn').addEventListener('click', () => {
+  nykyinenPvm.setDate(nykyinenPvm.getDate() + 1);
+  lataaKapasiteetti();
+});
+document.getElementById('tanaan-btn').addEventListener('click', () => {
+  nykyinenPvm = new Date();
+  lataaKapasiteetti();
+});
+document.getElementById('paivita-btn').addEventListener('click', lataaKapasiteetti);
+
+function initGoogleAuth() {
+  const istuntoId = sessionStorage.getItem('stm_istunto');
+  if (!istuntoId) {
+    window.location.href = 'index.html';
+    return;
+  }
+  accessToken = istuntoId;
+  lataaKapasiteetti();
+}
+initGoogleAuth();
+</script>
+
+</body>
+</html>
