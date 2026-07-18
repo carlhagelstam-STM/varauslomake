@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>STM Varauslomake — Etusivu</title>
+<style>
+  :root {
+    --bg: #1c1c1c;
+    --surface: #2a2a2a;
+    --surface2: #303131;
+    --border: #3f3f40;
+    --border2: #4e4e4f;
+    --text: #f0f0f0;
+    --text2: #aaaaaa;
+    --text3: #888586;
+    --accent: #E50420;
+    --accent-hover: #c4261b;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px;
+  }
+  .logo-area { text-align: center; margin-bottom: 40px; }
+  .logo-area img { max-width: 280px; width: 100%; height: auto; }
+  .logo-area p { font-size: 12px; color: var(--text3); margin-top: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .links { display: grid; gap: 14px; width: 100%; max-width: 420px; }
+
+  .link-card {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 18px 20px; text-decoration: none; color: var(--text);
+    transition: all 0.15s;
+  }
+  .link-card:hover { border-color: var(--accent); background: var(--surface2); transform: translateY(-1px); }
+  .link-icon { font-size: 26px; flex-shrink: 0; }
+  .link-text { flex: 1; }
+  .link-title { font-size: 15px; font-weight: 700; }
+  .link-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .link-arrow { color: var(--text3); font-size: 18px; }
+  .link-card:hover .link-arrow { color: var(--accent); }
+
+  .link-card.primary { border-color: var(--accent); background: rgba(229,4,32,0.08); }
+  .links.hidden { display: none; }
+  #login-area { text-align: center; margin-bottom: 20px; }
+  #login-btn {
+    padding: 12px 24px; border-radius: var(--radius-lg); border: none;
+    background: var(--accent); color: #fff; font-size: 14px; font-weight: 700;
+    cursor: pointer;
+  }
+  #login-btn:hover { background: var(--accent-hover); }
+  #login-status { font-size: 12px; color: var(--text3); margin-top: 10px; }
+</style>
+</head>
+<body>
+
+  <div class="logo-area">
+    <img src="stlm_logo.webp" alt="Suomen Tuulilasimestarit" />
+    <p>Varausjärjestelmä</p>
+  </div>
+
+  <div id="login-area">
+    <button id="login-btn">Kirjaudu Google-tilillä</button>
+    <div id="login-status"></div>
+  </div>
+
+  <div class="links hidden" id="links-area">
+    <a class="link-card primary" href="uusivaraus.html">
+      <span class="link-icon">📅</span>
+      <span class="link-text">
+        <div class="link-title">Uusi varaus</div>
+        <div class="link-desc">Tee uusi asennusvaraus tai tarjous</div>
+      </span>
+      <span class="link-arrow">→</span>
+    </a>
+
+    <a class="link-card" href="varauskeskus.html">
+      <span class="link-icon">📋</span>
+      <span class="link-text">
+        <div class="link-title">Varauskeskus</div>
+        <div class="link-desc">Katso, muokkaa ja peruuta varauksia</div>
+      </span>
+      <span class="link-arrow">→</span>
+    </a>
+
+    <a class="link-card" href="asentaja.html">
+      <span class="link-icon">🔧</span>
+      <span class="link-text">
+        <div class="link-title">Asentajat</div>
+        <div class="link-desc">Tulevat työt ja työn aloitus</div>
+      </span>
+      <span class="link-arrow">→</span>
+    </a>
+
+    <a class="link-card" href="kapasiteetti.html">
+      <span class="link-icon">📊</span>
+      <span class="link-text">
+        <div class="link-title">Kapasiteetti</div>
+        <div class="link-desc">Kaikkien pisteiden tilanne tänään</div>
+      </span>
+      <span class="link-arrow">→</span>
+    </a>
+
+    <a class="link-card" href="admin.html">
+      <span class="link-icon">👤</span>
+      <span class="link-text">
+        <div class="link-title">Käyttäjähallinta</div>
+        <div class="link-desc">Käyttöoikeudet ja roolit (vain admin)</div>
+      </span>
+      <span class="link-arrow">→</span>
+    </a>
+  </div>
+
+</body>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+const CLIENT_ID = '407173392975-daujo79fag2g1si9spljnv6vkct5ccqj.apps.googleusercontent.com';
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwJD34dyJhcwvp0l2JDwCkB2cVgM2Ue9pWRYQ1jp9xh8z_k9maSv7bkt69ZJgfkc-pN/exec';
+const SCOPES = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive';
+
+function naytaSisaankirjautunut(email) {
+  document.getElementById('login-area').style.display = 'none';
+  document.getElementById('links-area').classList.remove('hidden');
+}
+
+function naytaVirhe(viesti) {
+  document.getElementById('login-status').textContent = viesti;
+}
+
+// Onko meillä jo voimassa oleva istunto localStoragessa? UUSI 19.7.2026:
+// vaihdettu sessionStoragesta localStorageen, jotta kirjautuminen säilyy
+// vaikka selain/välilehti suljetaan välissä — palvelin vanhentaa istunnon
+// silti 8h kuluttua (ISTUNNON_KESTO_MS), joten tämä ei pidennä turvallisuusrajaa.
+const olemassaOlevaIstunto = localStorage.getItem('stm_istunto');
+if (olemassaOlevaIstunto) {
+  // Oletetaan voimassa olevaksi — muut sivut tarkistavat tarvittaessa palvelimelta.
+  naytaSisaankirjautunut();
+}
+
+function initGoogleAuth() {
+  if (!window.google) { setTimeout(initGoogleAuth, 300); return; }
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { naytaVirhe('Kirjautuminen epäonnistui: ' + resp.error); return; }
+      naytaVirhe('Muodostetaan istuntoa...');
+      try {
+        const r = await fetch(WEBHOOK_URL + '?action=luoIstunto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ token: resp.access_token })
+        });
+        const data = await r.json();
+        if (data.ok) {
+          localStorage.setItem('stm_istunto', data.istuntoId);
+          localStorage.setItem('stm_email', data.email);
+          naytaSisaankirjautunut(data.email);
+          kaynnistaTaustalataus(data.istuntoId);
+        } else {
+          naytaVirhe('Istunnon luonti epäonnistui: ' + (data.error || 'Tuntematon virhe'));
+        }
+      } catch (e) {
+        naytaVirhe('Virhe: ' + e.message);
+      }
+    }
+  });
+  document.getElementById('login-btn').addEventListener('click', () => {
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+  });
+}
+initGoogleAuth();
+
+// ═══════════════════════════════════════════════════════════
+// TAUSTALATAUS (17.7.2026): kertaluonteinen, tapahtuu vain kirjautumisen
+// yhteydessä. Esilataa Varauskeskuksen TAI Asentajan datan sessionStorageen,
+// mutta VAIN jos käyttäjällä on täsmälleen YKSI selkeä kohde — jos hänellä
+// on pääsy molempiin (tai ei kumpaakaan), ei arvata mitään, koska väärä
+// arvaus tuhlaisi juuri niitä Airtable-kutsuja joita säästämään pyritään.
+// HUOM: ei toistuva, ei ajastin — tämä ajetaan kerran per kirjautuminen.
+// Ei koskaan estä tai hidasta itse kirjautumista — kaikki virheet nielaistaan
+// hiljaisesti, koska esilataus on pelkkä nopeutus, ei kriittinen toiminto.
+// ═══════════════════════════════════════════════════════════
+async function kaynnistaTaustalataus(istuntoId) {
+  try {
+    const r = await fetch(WEBHOOK_URL + '?action=haeOmatOikeudet&token=' + encodeURIComponent(istuntoId));
+    const data = await r.json();
+    if (!data.ok) return; // ei kriittinen — sivut hakevat oman datansa normaalisti tarvittaessa
+
+    const kohteita = (data.varauskeskus ? 1 : 0) + (data.asentaja ? 1 : 0);
+    if (kohteita !== 1) return; // ei arvata jos molemmat tai ei kumpikaan
+
+    const nyt = new Date();
+    const maanantai = new Date(nyt);
+    const vp = (maanantai.getDay() + 6) % 7; // ma=0 ... su=6
+    maanantai.setDate(maanantai.getDate() - vp);
+    const sunnuntai = new Date(maanantai);
+    sunnuntai.setDate(sunnuntai.getDate() + 6);
+    const fmt = (d) => {
+      const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${day}`;
+    };
+    const alku = fmt(maanantai);
+    const loppu = fmt(sunnuntai);
+
+    if (data.varauskeskus) {
+      const vr = await fetch(WEBHOOK_URL + '?action=haeVaraukset&token=' + encodeURIComponent(istuntoId)
+        + '&alku=' + alku + '&loppu=' + loppu);
+      const vdata = await vr.json();
+      if (vdata.ok) {
+        sessionStorage.setItem('stm_esilataus_varaukset', JSON.stringify({
+          alku, loppu, varaukset: vdata.varaukset || [], aikaleima: new Date().toISOString()
+        }));
+      }
+    } else if (data.asentaja) {
+      const tr = await fetch(WEBHOOK_URL + '?action=haeAsentajaTyot&token=' + encodeURIComponent(istuntoId)
+        + '&alku=' + alku + '&loppu=' + loppu);
+      const tdata = await tr.json();
+      if (tdata.ok) {
+        sessionStorage.setItem('stm_esilataus_tyot', JSON.stringify({
+          alku, loppu, tyot: tdata.tyot || [], aikaleima: new Date().toISOString()
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('Taustalataus epäonnistui (ei kriittistä):', e.message);
+  }
+}
+</script>
+</html>
