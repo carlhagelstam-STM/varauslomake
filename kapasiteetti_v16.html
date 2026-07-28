@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM Kapasiteetti</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Titillium+Web:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #1c1c1c;
+    --surface: #2a2a2a;
+    --surface2: #303131;
+    --surface3: #3a3a3a;
+    --border: #3f3f40;
+    --border2: #4e4e4f;
+    --text: #f0f0f0;
+    --text2: #aaaaaa;
+    --text3: #888586;
+    --accent: #E50420;
+    --accent-hover: #c4261b;
+    --accent-light: #2a0408;
+    --success: #2c901e;
+    --success-light: #0d2210;
+    --danger: #ff5126;
+    --slot-empty-border: var(--border2);
+    --varattu: #4a6fa5;
+    --tyon-alla: #d9a441;
+    --valmis: var(--success);
+    --poikkeama: var(--accent);
+    --ylimaara-bg: #2a0408;
+    --ylimaara-border: #5a1f1f;
+  }
+  body.light {
+    --bg: #f0f0f0;
+    --surface: #ffffff;
+    --surface2: #f7f7f7;
+    --surface3: #eeeeee;
+    --border: #dddddd;
+    --border2: #cccccc;
+    --text: #1c1c1c;
+    --text2: #555555;
+    --text3: #888586;
+    --accent: #E50420;
+    --accent-hover: #c4261b;
+    --accent-light: #ffbebe;
+    --success: #2c901e;
+    --success-light: #d0f1e8;
+    --danger: #ff5126;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    transition: background 0.2s, color 0.2s;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    border-bottom: 2px solid var(--accent);
+    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .logo-lockup { display: flex; align-items: center; gap: 10px; }
+  .logo-lockup img { height: 34px; width: auto; }
+  .logo-name { font-weight: 800; font-size: 14px; }
+  .logo-sub { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .header-right a { color: inherit; text-decoration: none; font-size: 13px; }
+  #theme-btn {
+    width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border2);
+    background: var(--surface2); cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  #theme-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+  #auth-btn {
+    display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--border2); background: var(--surface2); color: var(--text2);
+    font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 500;
+  }
+  .auth-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border2); flex-shrink: 0; }
+  .auth-dot.green { background: var(--success); }
+  #paivamaara-rivi {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #paivamaara-rivi button {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 5px 11px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #paivamaara-rivi button:hover { background: var(--border); }
+  #paivamaara-otsikko {
+    font-size: 15px;
+    font-weight: 600;
+    min-width: 150px;
+    text-align: center;
+  }
+  #status-msg {
+    text-align: center;
+    color: var(--text3);
+    padding: 40px;
+  }
+
+  /* Pääalue täyttää kaiken jäljellä olevan tilan. UUSI 15.7.2026: vaihdettu
+     CSS Gridistä flex-wrap-asetteluun, koska korttien LEVEYS on nyt kiinteä
+     (ks. laskeLokeronLeveysPx) — grid ei sovi tähän yhtä luontevasti kuin
+     rivittyvä flex. Kortit rivittyvät automaattisesti kun eivät mahdu
+     leveyssuunnassa. EI SCROLLAUSTA: sivu kasvaa pystyyn tarpeen mukaan
+     mieluummin kuin rajaa korkeuden ja pakottaa vierittämään. */
+  #pisteet-grid {
+    display: none;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .piste-kortti {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2px; /* KORJAUS 19.7.2026: 2px kiinteä marginaali, ei enää 10px — ks. sarakkeet-rivi */
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; /* leveys on kiinteä, ei kutistu */
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  /* UUSI 28.7.2026: raahauksen kohdekortin korostus (drag-and-drop, ruutujen
+     siirto pisteiden välillä). */
+  .piste-kortti.drag-kohde {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent) inset;
+  }
+  .slot-tyhja.raahattava {
+    cursor: grab;
+  }
+  .slot-tyhja.raahattava:active {
+    cursor: grabbing;
+  }
+  .slot-tyhja.raahataan {
+    opacity: 0.35;
+  }
+  /* UUSI 28.7.2026: työn raahaus toiselle asentajalle (sama piste) */
+  .raahattava-tyo {
+    cursor: grab;
+  }
+  .raahattava-tyo:active {
+    cursor: grabbing;
+  }
+  .raahattava-tyo.raahataan {
+    opacity: 0.35;
+  }
+  .sarake.drop-kohde-tyo {
+    background: rgba(37, 99, 235, 0.15);
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+  }
+  .sarake-vieras-tag {
+    font-size: 8px;
+    color: var(--accent);
+    display: block;
+  }
+  .peru-siirto-btn {
+    font-size: 9px;
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text3);
+    cursor: pointer;
+    padding: 0 4px;
+    margin-top: 2px;
+  }
+  .peru-siirto-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .piste-otsikko {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 6px 4px 8px;
+    flex-shrink: 0;
+  }
+  .piste-nimi {
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .piste-alaotsikko {
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  /* Sarakkeet täyttävät koko kortin korkeuden */
+  .sarakkeet-rivi {
+    display: flex;
+    gap: 2px; /* KORJAUS 19.7.2026: tasan 2px väli sarakkeiden välillä, sama kuin reunamarginaali */
+    flex: 1;
+    min-height: 0;
+  }
+  .sarake {
+    /* KORJAUS 19.7.2026: sarakkeen leveys on AINA tasan RUUTU_LEVEYS_PX
+       (62px) — ei enää 124px "varmuusmarginaalia". Jos pisteessä on vain
+       1 asentaja, toinen paikka jää näkyvästi tyhjäksi (ks. renderoiPisteKortti)
+       sen sijaan että ruutu venyisi täyttämään ylimääräisen tilan. Tämä pitää
+       KAIKKI lokerot (2+ asentajaa) tismalleen samanlevyisinä keskenään.
+       Leveys asetetaan JS:stä inline-tyylinä (RUUTU_LEVEYS_PX-vakio). */
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+  }
+  .sarake-tyhja-paikka {
+    /* Näkyvä tyhjä paikkavaraus kun asentajia on vähemmän kuin lokeron
+       vakioleveys sallisi (esim. 1 asentaja 2 paikan lokerossa). */
+    flex-shrink: 0;
+  }
+  .sarake-otsikko {
+    font-size: 9px;
+    color: var(--text3);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+
+  /* UUSI 28.7.2026: Ruutujen säiliö EI enää käytä flex-growia kokoon —
+     kortti kutistuu aina sisällön mukaan (ei ole kiinteän korkuinen aukiolon
+     mittainen), joten flex-growilla ei ollut mitään ylimääräistä tilaa
+     jaettavaksi ja kaikki ruudut näyttivät samalta. Koko lasketaan nyt
+     SUORAAN pikseleinä minuuttia kohti (ks. PX_PER_MIN, luoTyoSlot) —
+     aina täsmälleen oikea riippumatta kortin kokonaiskorkeudesta. */
+  .ruudut {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+    align-self: flex-start; /* UUSI 15.7.2026: ei venytä leveyttä sarakkeen mukaan */
+  }
+  .slot {
+    border-radius: 5px;
+    padding: 6px;
+    font-size: 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    line-height: 1.2;
+    flex-shrink: 0;
+    overflow: hidden;
+    cursor: default;
+    box-sizing: border-box;
+  }
+  .slot-tyhja {
+    border: 1px dashed var(--slot-empty-border);
+    color: var(--text3);
+  }
+  .slot-vaihto, .slot-korjaus, .slot-reklamaatio, .slot-muu, .slot-valmis, .slot-poikkeama {
+    cursor: pointer; /* UUSI 15.7.2026: klikattava, avaa tietonäkymän */
+  }
+  .slot-vaihto:hover, .slot-korjaus:hover, .slot-reklamaatio:hover, .slot-muu:hover,
+  .slot-valmis:hover, .slot-poikkeama:hover {
+    filter: brightness(1.15);
+  }
+  /* UUSI 27.7.2026: väri tulee nyt TYYPISTÄ (sama paletti kuin varauskeskus.html:n
+     viikkonäkymässä), paitsi Valmis/Poikkeama-tiloissa joissa tila voittaa —
+     tismalleen sama logiikka kuin varauskeskus.html:n tileLuokka()-funktiossa,
+     ks. luokkaTyoStatus() alla. */
+  .slot-vaihto      { background: #1a3a5c; border: 1px solid #2563eb; color: #93c5fd; }
+  .slot-korjaus     { background: #0d2e2a; border: 1px solid #0f6e56; color: #5eead4; }
+  .slot-reklamaatio { background: #3a1414; border: 1px solid #dc2626; color: #fca5a5; }
+  .slot-muu         { background: var(--surface2); border: 1px solid var(--border2); color: var(--text2); }
+  .slot-valmis      { background: var(--valmis);    color: #0d1f14; }
+  .slot-poikkeama   { background: var(--poikkeama); color: #fff; }
+  .slot-rek {
+    font-weight: 700;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .slot-aika {
+    opacity: 0.85;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+  /* KORJAUS 28.7.2026: kellonaika hillitympi — järjestys on nyt tärkeämpi
+     tieto kuin tarkka kellonaika (Carlin pyyntö 28.7.2026). */
+  .slot-aika-himmea {
+    opacity: 0.5;
+    font-size: 8px;
+  }
+  .drop-kohde-tyo-yksittainen {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  /* UUSI 15.7.2026: ylityö-ruutu (kiintiön ylittävä työ samassa sarakkeessa)
+     saa oman, tummemman/erisävyisen taustan verrattuna normaaliin
+     saman-tilaiseen ruutuun — visuaalinen vihje "tämä on jo yli normaalin
+     päiväkiintiön". Käytetään box-shadow-insettiä, jotta alkuperäinen
+     tila-väri (varattu/työn alla/valmis/poikkeama) pysyy silti näkyvissä. */
+  .slot-ylitys-alue {
+    box-shadow: inset 0 0 0 999px rgba(0,0,0,0.35);
+  }
+
+  /* UUSI 27.7.2026: katkoviiva kiintiön ja ylitysalueen välissä. Näytetään
+     AINA (myös silloin kun ylitysalueella ei vielä ole yhtään työtä),
+     koska ylitysalueella on nyt aina vähintään 2 tyhjää puskuriruutua
+     — ks. renderoiPisteKortti. */
+  .ylitys-viiva {
+    border-top: 1px dashed var(--text3);
+    margin: 4px 0;
+    flex-shrink: 0;
+  }
+
+  /* UUSI 15.7.2026: Puuttuvat resurssit on nyt OMA KORTTI muiden
+     pistekorttien joukossa (ei enää erillinen koko sivun levyinen palkki).
+     Erottuu muista korteista punertavalla reunalla. */
+  .puuttuvat-resurssit-kortti {
+    border-color: var(--ylimaara-border);
+  }
+  .puuttuvat-resurssit-kortti .piste-nimi {
+    color: var(--accent);
+  }
+
+  .ei-asentajia {
+    color: var(--text3);
+    font-size: 12px;
+    text-align: center;
+    padding: 10px;
+  }
+
+  /* UUSI 15.7.2026: kevyt tietomodaali (VAIN LUKU, ei muokkausta).
+     Avautuu kun klikkaa mitä tahansa täytettyä ruutua. */
+  #tieto-modaali-tausta {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #tieto-modaali {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 18px;
+    min-width: 260px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  #tieto-modaali h2 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+  }
+  #tieto-modaali .rivi {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  #tieto-modaali .rivi:last-of-type { border-bottom: none; }
+  #tieto-modaali .rivi .label { color: var(--text3); }
+  #tieto-modaali-sulje {
+    margin-top: 14px;
+    width: 100%;
+    padding: 8px;
+    background: var(--border);
+    border: none;
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #tieto-modaali-sulje:hover { background: var(--border2); }
+</style>
+</head>
+<body>
+
+
+<header class="page-header">
+  <div class="logo-lockup">
+    <img src="stlm_logo.webp" alt="Suomen Tuulilasimestarit" />
+    <div>
+      <div class="logo-name">Suomen Tuulilasimestarit</div>
+      <div class="logo-sub">Kapasiteetti — kaikki pisteet</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <a href="index.html">🏠 Etusivu</a>
+    <a href="#" onclick="kirjauduUlosJaOhjaa(); return false;">🚪 Kirjaudu ulos</a>
+    <button id="theme-btn" onclick="toggleTheme()" title="Vaihda teema">
+      <span id="theme-icon">☀️</span>
+    </button>
+  </div>
+</header>
+
+<div id="paivamaara-rivi">
+  <button id="edellinen-btn" title="Edellinen päivä">‹</button>
+  <div id="paivamaara-otsikko">—</div>
+  <button id="seuraava-btn" title="Seuraava päivä">›</button>
+  <button id="tanaan-btn" title="Tänään">Tänään</button>
+  <button id="paivita-btn" title="Päivitä">⟳</button>
+</div>
+
+<div id="status-msg">Ladataan kapasiteettia...</div>
+<div id="pisteet-grid"></div>
+
+<div id="tieto-modaali-tausta">
+  <div id="tieto-modaali">
+    <h2 id="tieto-modaali-otsikko">Varauksen tiedot</h2>
+    <div id="tieto-modaali-sisalto"></div>
+    <button id="tieto-modaali-sulje">Sulje</button>
+  </div>
+</div>
+
+<script>
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwJD34dyJhcwvp0l2JDwCkB2cVgM2Ue9pWRYQ1jp9xh8z_k9maSv7bkt69ZJgfkc-pN/exec';
+
+let accessToken = null;
+let nykyinenPvm = new Date();
+// UUSI 28.7.2026: kilpa-ajo-suoja. Jos käyttäjä klikkaa päivänvaihtonappia
+// nopeasti useamman kerran, useampi lataaKapasiteetti()-kutsu voi olla
+// lennossa yhtä aikaa — ilman tätä vartijaa VANHEMPI (esim. tyhjä päivä)
+// pyyntö saattoi palata UUDEMMAN (esim. 3.8., jolla on töitä) jälkeen ja
+// ylikirjoittaa juuri näytetyn oikean datan tyhjällä. Jokainen kutsu
+// nappaa oman juoksevan tunnisteen ja tarkistaa ennen DOM-kirjoitusta
+// että se on vielä uusin — jos ei, vastaus hylätään hiljaisesti.
+let viimeisinPyyntoId = 0;
+
+// UUSI 28.7.2026: ruutujen raahaus pisteestä toiseen (Asentajan_Sijoitukset).
+// raahattavaRuutu pitää kirjaa kesken olevasta raahauksesta; paivanSijoitukset
+// on viimeisimmän latauksen mukana haettu lista päivän siirroista (tarvitaan
+// "peru siirto" -napin toimintaan).
+let raahattavaRuutu = null; // { asentajaId, lahtoPiste }
+let raahattavaTyo = null; // UUSI 28.7.2026: { tyoId, lahtoPiste } — työn siirto toiselle asentajalle
+let paivanSijoitukset = [];
+
+function kirjauduUlosJaOhjaa() {
+  localStorage.removeItem('stm_istunto');
+  localStorage.removeItem('stm_email');
+  window.location.href = 'index.html';
+}
+
+// UUSI 23.7.2026: teemanvaihto — sama malli kuin muilla sivuilla (admin.html,
+// uusivaraus.html), jotta koko sovellus käyttäytyy yhtenäisesti.
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('theme-icon').textContent = isLight ? '🌙' : '☀️';
+  localStorage.setItem('stm_theme', isLight ? 'light' : 'dark');
+}
+if (localStorage.getItem('stm_theme') === 'light') {
+  document.body.classList.add('light');
+  document.addEventListener('DOMContentLoaded', () => {
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.textContent = '🌙';
+  });
+}
+
+function tarkistaIstuntoVirhe(vastausData) {
+  if (vastausData && vastausData.ok === false &&
+      /kirjautuminen|istunto/i.test(vastausData.error || '')) {
+    document.getElementById('status-msg').textContent = 'Istunto on vanhentunut, siirretään kirjautumaan...';
+    document.getElementById('status-msg').style.display = 'block';
+    document.getElementById('pisteet-grid').style.display = 'none';
+    setTimeout(kirjauduUlosJaOhjaa, 1500);
+    return true;
+  }
+  return false;
+}
+
+// UUSI 19.7.2026: keskitetty fetch-wrapper — sama malli kuin varauskeskus.html/
+// asentaja.html/admin.html:ssä. Yhtenäisyyden vuoksi kapasiteetti.html käyttää
+// nyt samaa fetchJson-apufunktiota, vaikka aiemmin manuaalinen tarkistus
+// (tarkistaIstuntoVirhe suoraan kutsupaikassa) toimikin jo oikein.
+// cache:'no-store' pakottaa selaimen tekemään aina tuoreen pyynnön (ks.
+// varauskeskus.html:n kommentti samasta korjauksesta).
+async function fetchJson(url, options) {
+  const finalOptions = Object.assign({ cache: 'no-store' }, options || {});
+  const resp = await fetch(url, finalOptions);
+  const data = await resp.json();
+  if (tarkistaIstuntoVirhe(data)) {
+    throw new Error('ISTUNTO_VANHENTUNUT');
+  }
+  return data;
+}
+
+function fmtDate(d) {
+  const vuosi = d.getFullYear();
+  const kk = String(d.getMonth() + 1).padStart(2, '0');
+  const pv = String(d.getDate()).padStart(2, '0');
+  return `${vuosi}-${kk}-${pv}`;
+}
+
+function fmtOtsikko(d) {
+  const paivat = ['Sunnuntai','Maanantai','Tiistai','Keskiviikko','Torstai','Perjantai','Lauantai'];
+  return `${paivat[d.getDay()]} ${fmtDate(d)}`;
+}
+
+// UUSI 27.7.2026: väriluokka tulee TYYPISTÄ (sama paletti/logiikka kuin
+// varauskeskus.html:n tileLuokka()) — Valmis/Poikkeama-tila voittaa tyypin,
+// muuten (Varattu, Työn alla) väri tulee työn tyypistä.
+function luokkaTyoStatus(tyo) {
+  if (tyo.tila === 'Poikkeama') return 'slot-poikkeama';
+  if (tyo.tila === 'Valmis') return 'slot-valmis';
+  const t = (tyo.tyyppi || '').toLowerCase();
+  if (t === 'vaihto') return 'slot-vaihto';
+  if (t === 'korjaus') return 'slot-korjaus';
+  if (t === 'reklamaatio') return 'slot-reklamaatio';
+  return 'slot-muu';
+}
+
+// UUSI 15.7.2026: kiinteä sarakeleveys per asentaja (pikseleinä). Mitoitettu
+// niin että rekisterinumero ("ABC-123") + hieman tyyppitekstiä mahtuu ilman
+// että ruutu venyy turhan leveäksi. Kortin kokonaisleveys = asentajamäärä
+// kertaa tämä (+ välit/padding), EI enää koko kortin leveyttä jaettuna.
+// KORJAUS 19.7.2026: sarakkeen leveys on nyt AINA tasan RUUTU_LEVEYS_PX
+// (ei enää 124px "kahden ruudun" varmuusmarginaalia). Lokeron kokonaisleveys
+// lasketaan tarkasti: MARGINAALI_PX + N*(RUUTU_LEVEYS_PX) + (N-1)*MARGINAALI_PX
+// + MARGINAALI_PX, missä N = max(2, asentajienMäärä) — eli lokero on AINA
+// vähintään kahden asentajan levyinen, ja kasvaa jos asentajia on enemmän.
+// Tällä pidetään esim. Vantaa (2 asentajaa) ja Ylöjärvi (1 asentaja)
+// tismalleen samanlevyisinä, koska molemmat käyttävät N=2 -leveyttä;
+// Ylöjärvellä toinen paikka jää silloin näkyvästi tyhjäksi.
+const RUUTU_LEVEYS_PX = 62;
+const MARGINAALI_PX = 2;
+// UUSI 28.7.2026: ruudun korkeus lasketaan nyt SUORAAN minuuteista, ei
+// flex-growilla (ks. CSS-kommentti .ruudut-luokan kohdalla — flex-grow ei
+// toiminut koska kortti ei ole kiinteän korkuinen). 1 ruutu tyhjänä = 60 min
+// = 60 * PX_PER_MIN pikseliä. Vaihda tätä lukua jos ruudukko näyttää
+// liian isolta/pieneltä — kaikki koot skaalautuvat suhteessa automaattisesti.
+const PX_PER_MIN = 1.1; // pienennetty 27.7: korjauslaatikot olivat liian isoja
+const SLOT_MIN_PX = 20; // ei koskaan luettamattoman pieni, vaikka kesto olisi hyvin lyhyt
+
+function laskeRuutuKorkeusPx(kestoMin) {
+  return Math.max(SLOT_MIN_PX, Math.round((kestoMin || 60) * PX_PER_MIN));
+}
+
+function laskeLokeronLeveysPx(asentajienMaara) {
+  const n = Math.max(2, asentajienMaara);
+  return MARGINAALI_PX + n * RUUTU_LEVEYS_PX + (n - 1) * MARGINAALI_PX + MARGINAALI_PX;
+}
+
+// HUOM 15.7.2026: kiinteä korkeuslaskenta (laskeKortinKorkeusPx) POISTETTU
+// — kortin korkeus ei ole enää yksi ennalta laskettu luku, vaan jokainen
+// sarake venyy luonnollisesti CSS flex-sisällön mukaan (kiintiön ruudut +
+// mahdolliset ylityöt). Tämä toteuttaa periaatteen "EI SCROLLAUSTA, näkymä
+// kasvaa mieluummin isommaksi" tarkemmin kuin yksi koko kortille laskettu
+// arvio olisi tehnyt.
+
+// UUSI 15.7.2026: avaa kevyen VAIN LUKU -tietomodaalin klikatulle työlle.
+// Tässä versiossa näytetään ne kentät jotka meillä on jo landing page
+// -datassa (ei erillistä hakua palvelimelta) — Laaja-tason näkyvyys
+// oletuksena, koska Asentajan näkyvyystaso -suodatus on vielä kesken
+// koodattavana (ks. muistiinpanot). Kun näkyvyystaso valmistuu, tämä
+// funktio voidaan laajentaa hakemaan/suodattamaan kenttiä tason mukaan.
+function avaaTietoModaali(tyo, pisteNimi) {
+  document.getElementById('tieto-modaali-otsikko').textContent = tyo.rekisteri || 'Varaus';
+  const sisalto = document.getElementById('tieto-modaali-sisalto');
+  sisalto.innerHTML = '';
+
+  const kentat = [
+    ['Piste', pisteNimi],
+    ['Kellonaika', tyo.kellonaika],
+    ['Tyyppi', tyo.tyyppi || '—'],
+    ['Tila', tyo.tila],
+    ['Rekisterinumero', tyo.rekisteri || '—'],
+    ['Varausnumero', tyo.varausnumero || '—'],
+  ];
+  kentat.forEach(([label, arvo]) => {
+    const rivi = document.createElement('div');
+    rivi.className = 'rivi';
+    const l = document.createElement('span');
+    l.className = 'label';
+    l.textContent = label;
+    const a = document.createElement('span');
+    a.textContent = arvo;
+    rivi.appendChild(l);
+    rivi.appendChild(a);
+    sisalto.appendChild(rivi);
+  });
+
+  document.getElementById('tieto-modaali-tausta').style.display = 'flex';
+}
+
+function suljeTietoModaali() {
+  document.getElementById('tieto-modaali-tausta').style.display = 'none';
+}
+document.getElementById('tieto-modaali-sulje').addEventListener('click', suljeTietoModaali);
+document.getElementById('tieto-modaali-tausta').addEventListener('click', (e) => {
+  if (e.target.id === 'tieto-modaali-tausta') suljeTietoModaali();
+});
+
+// Luo yhden työruudun. Korkeus on nyt SUORA pikselilaskenta kestosta
+// (laskeRuutuKorkeusPx, ks. PX_PER_MIN) — pidempi työ on aina konkreettisesti
+// korkeampi kuin lyhyt työ, riippumatta kortin kokonaiskorkeudesta (UUSI
+// 28.7.2026, korjaa aiemman flex-grow-yrityksen joka ei toiminut koska
+// kortilla ei ole kiinteää korkeutta). Aikaleima poistettu ruudusta
+// kokonaan (Carlin pyyntö 27.7.2026) — vain rekisterinumero näkyy, tarkat
+// tiedot löytyvät klikkaamalla auki avautuvasta tietomodaalista.
+// UUSI 15.7.2026: klikattava, avaa tietomodaalin (VAIN LUKU).
+function luoTyoSlot(tyo, pisteNimi, sarake) {
+  const slot = document.createElement('div');
+  const luokka = luokkaTyoStatus(tyo);
+  slot.className = 'slot ' + luokka;
+  slot.style.height = laskeRuutuKorkeusPx(tyo.kestoMin) + 'px';
+  slot.dataset.tyoId = tyo.id;
+  slot.dataset.tila = tyo.tila || '';
+  slot.addEventListener('click', () => avaaTietoModaali(tyo, pisteNimi));
+
+  // UUSI 28.7.2026: työn voi raahata toiselle asentajalle SAMAN pisteen
+  // sisällä (ei pisteiden välillä — se on eri, isompi asia). "Valmis"-tilaa
+  // ei saa raahata, koska se on jo lukittu muokkaukselta palvelimella.
+  if (tyo.tila !== 'Valmis') {
+    slot.draggable = true;
+    slot.classList.add('raahattava-tyo');
+    slot.addEventListener('dragstart', (ev) => {
+      raahattavaTyo = {
+        tyoId: tyo.id,
+        lahtoPiste: pisteNimi,
+        slotEl: slot,
+        lahtoAsentajaId: sarake ? sarake.asentajaId : null,
+      };
+      slot.classList.add('raahataan');
+      ev.dataTransfer.setData('text/plain', tyo.id);
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.stopPropagation();
+    });
+    slot.addEventListener('dragend', () => {
+      slot.classList.remove('raahataan');
+      raahattavaTyo = null;
+    });
+  }
+
+  // UUSI 28.7.2026: pudottaminen TOISEN työn päälle järjestelee sen tämän
+  // työn eteen (samassa sarakkeessa = pelkkä järjestely, eri sarakkeessa =
+  // sekä asentajan vaihto ETTÄ sijoitus juuri tähän kohtaan listaa).
+  if (sarake) {
+    slot.addEventListener('dragover', (ev) => {
+      if (!raahattavaTyo || raahattavaTyo.lahtoPiste !== pisteNimi || raahattavaTyo.tyoId === tyo.id) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      slot.classList.add('drop-kohde-tyo-yksittainen');
+    });
+    slot.addEventListener('dragleave', () => {
+      slot.classList.remove('drop-kohde-tyo-yksittainen');
+    });
+    slot.addEventListener('drop', async (ev) => {
+      if (!raahattavaTyo || raahattavaTyo.lahtoPiste !== pisteNimi || raahattavaTyo.tyoId === tyo.id) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      slot.classList.remove('drop-kohde-tyo-yksittainen');
+      const raahattu = raahattavaTyo;
+      raahattavaTyo = null;
+      await jarjesteleJaSiirraTyo(raahattu, sarake, slot, pisteNimi);
+    });
+  }
+
+  const rek = document.createElement('div');
+  rek.className = 'slot-rek';
+  rek.textContent = tyo.rekisteri || '—';
+  slot.appendChild(rek);
+
+  // KORJAUS 28.7.2026: kellonaika näytetään yhä Vaihto-tyypille, mutta
+  // aiempaa huomattavasti hillitymmin — Carlin mukaan "kellonaika ei ole
+  // kovin relevantti" nyt kun järjestys on raahattavissa käsin. Tieto
+  // jätetään silti näkyviin pienenä referenssinä.
+  if ((tyo.tyyppi || '').toLowerCase() === 'vaihto') {
+    const aika = document.createElement('div');
+    aika.className = 'slot-aika slot-aika-himmea';
+    // UUSI 28.7.2026: lukko-merkki jos asiakkaalle luvattu tarkka aika —
+    // silloin automaattinen järjestely ei muuta kellonaikaa.
+    aika.textContent = (tyo.lukittu ? '🔒 ' : '') + tyo.kellonaika;
+    slot.appendChild(aika);
+  }
+
+  return slot;
+}
+
+// KORJAUS 28.7.2026: siirtää raahatun työn kohdesarakkeeseen JUURI
+// kohdeSlotEl:n eteen (optimistinen DOM-siirto), ja pyytää palvelinta
+// laskemaan koko kohdesarakkeen kellonajat uusiksi järjestyksen mukaan
+// (action=jarjesteleTyot — ks. kasitteleTyoJarjestely Koodi.gs:ssä).
+// Erillistä "Järjestys"-numerokenttää ei enää käytetä — kellonaika ITSE
+// kertoo järjestyksen (Carlin pyyntö 28.7.2026), ja "Lukittu aika" -työt
+// jätetään palvelimella koskematta.
+async function jarjesteleJaSiirraTyo(raahattu, kohdeSarake, kohdeSlotEl, pisteNimi) {
+  const kohdeRuudut = kohdeSlotEl.closest('.ruudut');
+  if (!kohdeRuudut || !raahattu.slotEl) return;
+
+  // Optimistinen näkymä: siirrä heti oikeaan kohtaan DOMissa.
+  kohdeRuudut.insertBefore(raahattu.slotEl, kohdeSlotEl);
+
+  const tyoIdJarjestys = Array.from(kohdeRuudut.querySelectorAll('.slot[data-tyo-id]'))
+    .map(el => el.dataset.tyoId);
+
+  await laheteJarjestely(pisteNimi, kohdeSarake.asentajaId, tyoIdJarjestys);
+}
+
+// UUSI 28.7.2026: sama pyyntö myös silloin kun työ pudotetaan sarakkeen
+// TYHJÄLLE alueelle (ei tietyn toisen työn päälle) — silloin se menee
+// sarakkeen loppuun.
+async function laheteJarjestely(pisteNimi, kohdeAsentajaId, tyoIdJarjestys) {
+  try {
+    const resp = await fetchJson(WEBHOOK_URL + '?action=jarjesteleTyot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        token: accessToken,
+        piste: pisteNimi,
+        paivamaara: fmtDate(nykyinenPvm),
+        kohdeAsentajaId: kohdeAsentajaId,
+        tyoIdJarjestys: tyoIdJarjestys,
+      }),
+    });
+    if (!resp.ok) {
+      alert('Järjestelyn tallennus epäonnistui: ' + (resp.error || 'tuntematon virhe'));
+    }
+    await lataaKapasiteetti(true);
+  } catch (e) {
+    if (e.message === 'ISTUNTO_VANHENTUNUT') return;
+    alert('Järjestelyn tallennus epäonnistui: ' + e.message);
+  }
+}
+
+// UUSI 28.7.2026 (KORJAUS): yhteinen apufunktio kaikille "Vapaa"-ruuduille
+// (sekä kiintiöalueen että ylityöpuskurin) — aiemmin näitä oli kaksi eri
+// koodipolkua ja vain toinen sai raahaus-toiminnon. Käytetään setAttribute
+// (ei pelkkää .draggable-ominaisuutta) ja omaa 'raahattava'-luokkaa CSS:lle,
+// jotta kohdistus toimii varmasti kaikissa selaimissa.
+function luoVapaaSlot(sarake, pisteNimi) {
+  const tyhja = document.createElement('div');
+  tyhja.className = 'slot slot-tyhja';
+  tyhja.style.height = laskeRuutuKorkeusPx(60) + 'px';
+  tyhja.textContent = 'Vapaa';
+
+  // Vain KOTIsarakkeen vapaat ruudut ovat raahattavia — vierassarakkeen
+  // ruutu on jo siirretty, sitä ei raahata edelleen (peru siirto -nappi
+  // hoitaa sen paluun).
+  if (sarake.asentajaId && sarake.onKotiasentaja !== false) {
+    tyhja.setAttribute('draggable', 'true');
+    tyhja.draggable = true;
+    tyhja.classList.add('raahattava');
+    tyhja.addEventListener('dragstart', (ev) => {
+      raahattavaRuutu = { asentajaId: sarake.asentajaId, lahtoPiste: pisteNimi, slotEl: tyhja };
+      tyhja.classList.add('raahataan');
+      ev.dataTransfer.setData('text/plain', sarake.asentajaId);
+      ev.dataTransfer.effectAllowed = 'move';
+    });
+    tyhja.addEventListener('dragend', () => {
+      tyhja.classList.remove('raahataan');
+      raahattavaRuutu = null;
+    });
+  }
+
+  return tyhja;
+}
+
+function renderoiPisteKortti(pisteNimi, data) {
+  const kortti = document.createElement('div');
+  kortti.className = 'piste-kortti';
+
+  const otsikko = document.createElement('div');
+  otsikko.className = 'piste-otsikko';
+  const nimiEl = document.createElement('div');
+  nimiEl.className = 'piste-nimi';
+  nimiEl.textContent = pisteNimi;
+  otsikko.appendChild(nimiEl);
+
+  if (data && data.ok) {
+    const alaotsikko = document.createElement('div');
+    alaotsikko.className = 'piste-alaotsikko';
+    alaotsikko.textContent = data.sarakkeidenMaara + ' asentajaa';
+    otsikko.appendChild(alaotsikko);
+  }
+  kortti.appendChild(otsikko);
+
+  // UUSI 28.7.2026 (KORJAUS): pudotuskäsittelijät kiinnitetään heti tähän,
+  // ENNEN alla olevia pikapaluita — muuten "0 asentajaa" -kortit (esim.
+  // tyhjä mutta käyttökelpoinen "Oma"-piste) eivät koskaan saaneet
+  // pudotustoimintoa, koska funktio palasi niissä tapauksissa liian
+  // aikaisin. Varsinainen sallittavuus (Piste-tyyppi=Oma, Sallitut
+  // pisteet) tarkistetaan joka tapauksessa palvelimella (siirraRuutu).
+  kortti.addEventListener('dragover', (ev) => {
+    if (!raahattavaRuutu) return;
+    ev.preventDefault();
+    kortti.classList.add('drag-kohde');
+  });
+  kortti.addEventListener('dragleave', () => {
+    kortti.classList.remove('drag-kohde');
+  });
+  kortti.addEventListener('drop', async (ev) => {
+    ev.preventDefault();
+    kortti.classList.remove('drag-kohde');
+    if (!raahattavaRuutu) return;
+    if (raahattavaRuutu.lahtoPiste === pisteNimi) { raahattavaRuutu = null; return; }
+    const { asentajaId, slotEl } = raahattavaRuutu;
+    raahattavaRuutu = null;
+    // UUSI 28.7.2026: optimistinen näkymä — piilotetaan lähtöruutu heti,
+    // ei odoteta koko sivun uudelleenlatausta nähdäkseen että jotain
+    // tapahtui. lataaKapasiteetti() korjaa lopullisen tilan taustalla.
+    if (slotEl) slotEl.style.visibility = 'hidden';
+    await siirraRuutuPalvelimelle(asentajaId, pisteNimi);
+  });
+
+  if (!data || !data.ok) {
+    const virhe = document.createElement('div');
+    virhe.className = 'ei-asentajia';
+    virhe.textContent = (data && data.error) || 'Ei tietoa';
+    kortti.appendChild(virhe);
+    return kortti;
+  }
+
+  // KORJAUS 19.7.2026: lokeron leveys lasketaan nyt tarkasti niin että
+  // kaikki lokerot (2+ asentajaa) ovat tismalleen samanlevyisiä — ks.
+  // laskeLokeronLeveysPx-funktion kommentti yllä.
+  kortti.style.width = laskeLokeronLeveysPx(data.sarakkeidenMaara) + 'px';
+
+  if (data.sarakkeidenMaara === 0) {
+    const eiAsentajia = document.createElement('div');
+    eiAsentajia.className = 'ei-asentajia';
+    eiAsentajia.textContent = 'Ei asentajia käytettävissä tänään';
+    kortti.appendChild(eiAsentajia);
+    return kortti;
+  }
+
+  const rivi = document.createElement('div');
+  rivi.className = 'sarakkeet-rivi';
+
+  data.sarakkeet.forEach(sarake => {
+    const sarakeEl = document.createElement('div');
+    sarakeEl.className = 'sarake';
+    sarakeEl.style.width = RUUTU_LEVEYS_PX + 'px';
+
+    // UUSI 28.7.2026: sarake (yksittäinen asentajan lokero) toimii
+    // pudotuskohteena TYÖLLE — pudottaminen tälle asentajalle vaihtaa työn
+    // Asentaja-kentän. Vain saman pisteen sisällä (raahattavaTyo.lahtoPiste
+    // pitää täsmätä tämän kortin pisteNimeen).
+    if (sarake.asentajaId) {
+      sarakeEl.addEventListener('dragover', (ev) => {
+        if (!raahattavaTyo || raahattavaTyo.lahtoPiste !== pisteNimi) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        sarakeEl.classList.add('drop-kohde-tyo');
+      });
+      sarakeEl.addEventListener('dragleave', () => {
+        sarakeEl.classList.remove('drop-kohde-tyo');
+      });
+      sarakeEl.addEventListener('drop', async (ev) => {
+        if (!raahattavaTyo || raahattavaTyo.lahtoPiste !== pisteNimi) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        sarakeEl.classList.remove('drop-kohde-tyo');
+        const slotEl = raahattavaTyo.slotEl;
+        raahattavaTyo = null;
+        // KORJAUS 28.7.2026: pudotus TYHJÄLLE sarakealueelle (ei tietyn
+        // toisen työn päälle) — työ menee sarakkeen loppuun. Optimistinen
+        // näkymä ensin, sitten sama jarjesteleTyot-pyyntö kuin muuallakin
+        // (kellonaika lasketaan uusiksi palvelimella).
+        const ruudutKohde = sarakeEl.querySelector('.ruudut');
+        if (slotEl && ruudutKohde) ruudutKohde.appendChild(slotEl);
+        if (ruudutKohde) {
+          const tyoIdJarjestys = Array.from(ruudutKohde.querySelectorAll('.slot[data-tyo-id]'))
+            .map(el => el.dataset.tyoId);
+          await laheteJarjestely(pisteNimi, sarake.asentajaId, tyoIdJarjestys);
+        }
+      });
+    }
+
+    const sarakeOtsikko = document.createElement('div');
+    sarakeOtsikko.className = 'sarake-otsikko';
+    sarakeOtsikko.textContent = sarake.asentaja;
+    sarakeEl.appendChild(sarakeOtsikko);
+
+    // UUSI 28.7.2026: vierassarake (asentaja on tuotu tänne siirrolla,
+    // ei ole täällä kotipisteellään) merkitään ja saa "Peru siirto" -napin.
+    if (sarake.asentajaId && sarake.onKotiasentaja === false) {
+      const vierasTag = document.createElement('span');
+      vierasTag.className = 'sarake-vieras-tag';
+      vierasTag.textContent = 'vieras';
+      sarakeOtsikko.appendChild(vierasTag);
+
+      const peruBtn = document.createElement('button');
+      peruBtn.className = 'peru-siirto-btn';
+      peruBtn.textContent = 'Peru siirto';
+      peruBtn.addEventListener('click', () => peruSiirrotAsentajalta(sarake.asentajaId));
+      sarakeOtsikko.appendChild(peruBtn);
+    }
+
+    const ruudut = document.createElement('div');
+    ruudut.className = 'ruudut';
+    ruudut.style.width = RUUTU_LEVEYS_PX + 'px';
+
+    const kiintio = sarake.ruutumaara || 0;
+    const tyot = sarake.tyot || [];
+
+    // UUSI 27.7.2026: kiintiö- ja ylitysalue on nyt selkeästi kaksi eri
+    // vaihetta, katkoviiva niiden välissä. Kiintiöalueella (kiintio kpl)
+    // työ TAI tyhjä normaalitaustalla, sama kuin ennen. Katkoviivan
+    // jälkeen ylitysalue: KAIKKI kiintiön jälkeiset todelliset työt
+    // näytetään (ei koskaan katkaista), ja perään AINA vähintään 2 tyhjää
+    // ylityöruutua puskuriksi — kun yksi täyttyy, seuraavalla latauksella
+    // puskuri täydentyy taas kahteen (ks. sopimus Carlin kanssa 27.7.2026:
+    // "voi mennä yli kahdenkin, uusi tyhjä ilmestyy aina tarvittaessa").
+    // Ylityöruutuihin varataan vain varauskeskuksen kautta käsin.
+    for (let i = 0; i < kiintio; i++) {
+      if (tyot[i]) {
+        ruudut.appendChild(luoTyoSlot(tyot[i], pisteNimi, sarake));
+      } else {
+        ruudut.appendChild(luoVapaaSlot(sarake, pisteNimi));
+      }
+    }
+
+    const viiva = document.createElement('div');
+    viiva.className = 'ylitys-viiva';
+    ruudut.appendChild(viiva);
+
+    const ylitysTyot = tyot.slice(kiintio);
+    ylitysTyot.forEach(tyo => {
+      const slot = luoTyoSlot(tyo, pisteNimi, sarake);
+      slot.classList.add('slot-ylitys-alue');
+      ruudut.appendChild(slot);
+    });
+
+    // KORJAUS 28.7.2026: ylityöpuskurin "Vapaa"-ruudut näyttivät identtisiltä
+    // kiintiöalueen Vapaa-ruutujen kanssa, mutta EIVÄT olleet raahattavia —
+    // Carl yritti raahata näitä eikä mikään tapahtunut. Käytetään nyt samaa
+    // luoVapaaSlot-apufunktiota, jotta kaikki Vapaa-ruudut käyttäytyvät
+    // samoin riippumatta siitä ovatko ne kiintiön sisällä vai puskurissa.
+    for (let i = 0; i < 2; i++) {
+      const tyhjaYlitys = luoVapaaSlot(sarake, pisteNimi);
+      tyhjaYlitys.classList.add('slot-ylitys-alue');
+      ruudut.appendChild(tyhjaYlitys);
+    }
+
+    sarakeEl.appendChild(ruudut);
+    rivi.appendChild(sarakeEl);
+  });
+
+  // KORJAUS 19.7.2026: jos asentajia on vähemmän kuin lokeron vakioleveys
+  // (min. 2) sallisi, lisätään näkyvä tyhjä paikkavaraus-sarake täyttämään
+  // loppuosa — näin lokeron todellinen leveys (CSS width yllä) ja sisällön
+  // vaatima tila pysyvät yhtä suurina, eikä mikään venähdä/tyhjä alue jää
+  // ilman selitystä.
+  const nakyvatPaikat = Math.max(2, data.sarakkeidenMaara);
+  for (let i = data.sarakkeet.length; i < nakyvatPaikat; i++) {
+    const tyhjaPaikka = document.createElement('div');
+    tyhjaPaikka.className = 'sarake sarake-tyhja-paikka';
+    tyhjaPaikka.style.width = RUUTU_LEVEYS_PX + 'px';
+    rivi.appendChild(tyhjaPaikka);
+  }
+
+  kortti.appendChild(rivi);
+
+  return kortti;
+}
+
+// UUSI 15.7.2026: renderöi "Puuttuvat resurssit" -kortin — VAIN poissaolon
+// takia orvoksi jääneet työt, PISTEITTÄIN jaoteltuna (sarake = piste, ei
+// asentaja). Tämä on yksi kortti muiden pistekorttien JOUKOSSA, ei enää
+// erillinen koko sivun levyinen palkki.
+function renderoiPuuttuvatResurssitKortti(puuttuvatResurssitSarakkeet) {
+  const kortti = document.createElement('div');
+  kortti.className = 'piste-kortti puuttuvat-resurssit-kortti';
+
+  const otsikko = document.createElement('div');
+  otsikko.className = 'piste-otsikko';
+  const nimiEl = document.createElement('div');
+  nimiEl.className = 'piste-nimi';
+  nimiEl.textContent = 'Puuttuvat resurssit';
+  otsikko.appendChild(nimiEl);
+  kortti.appendChild(otsikko);
+
+  if (!puuttuvatResurssitSarakkeet || puuttuvatResurssitSarakkeet.length === 0) {
+    const eiMitaan = document.createElement('div');
+    eiMitaan.className = 'ei-asentajia';
+    eiMitaan.textContent = 'Ei puuttuvia resursseja';
+    kortti.appendChild(eiMitaan);
+    kortti.style.width = laskeLokeronLeveysPx(0) + 'px';
+    return kortti;
+  }
+
+  kortti.style.width = laskeLokeronLeveysPx(puuttuvatResurssitSarakkeet.length) + 'px';
+
+  const rivi = document.createElement('div');
+  rivi.className = 'sarakkeet-rivi';
+
+  puuttuvatResurssitSarakkeet.forEach(sarake => {
+    const sarakeEl = document.createElement('div');
+    sarakeEl.className = 'sarake';
+    sarakeEl.style.width = RUUTU_LEVEYS_PX + 'px';
+
+    const sarakeOtsikko = document.createElement('div');
+    sarakeOtsikko.className = 'sarake-otsikko';
+    sarakeOtsikko.textContent = sarake.piste;
+    sarakeEl.appendChild(sarakeOtsikko);
+
+    const ruudut = document.createElement('div');
+    ruudut.className = 'ruudut';
+    ruudut.style.width = RUUTU_LEVEYS_PX + 'px';
+
+    sarake.tyot.forEach(tyo => {
+      ruudut.appendChild(luoTyoSlot(tyo, sarake.piste));
+    });
+
+    sarakeEl.appendChild(ruudut);
+    rivi.appendChild(sarakeEl);
+  });
+
+  const nakyvatPaikatPR = Math.max(2, puuttuvatResurssitSarakkeet.length);
+  for (let i = puuttuvatResurssitSarakkeet.length; i < nakyvatPaikatPR; i++) {
+    const tyhjaPaikka = document.createElement('div');
+    tyhjaPaikka.className = 'sarake sarake-tyhja-paikka';
+    tyhjaPaikka.style.width = RUUTU_LEVEYS_PX + 'px';
+    rivi.appendChild(tyhjaPaikka);
+  }
+
+  kortti.appendChild(rivi);
+  return kortti;
+}
+
+// KORJAUS 28.7.2026: hiljainen-parametri — kun raahauksen/siirron jälkeen
+// haetaan tuore tila palvelimelta, EI enää näytetä koko sivun "Ladataan..."
+// -tilaa (grid piiloon + tekstiä), koska se näytti käyttäjälle rumalta
+// "jumitukselta" jokaisen siirron jälkeen. Sen sijaan grid pysyy koko ajan
+// näkyvissä ja päivittyy paikoilleen kun tuore data saapuu — sama tuntuma
+// kuin pisteiden järjestyksen vaihdossa (varauskeskus.html), joka ei
+// myöskään näytä latausruutua taustatallennuksen aikana.
+async function lataaKapasiteetti(hiljainen) {
+  if (!accessToken) return;
+  const omaPyyntoId = ++viimeisinPyyntoId; // UUSI 28.7.2026: ks. kommentti yllä
+  const statusMsg = document.getElementById('status-msg');
+  const grid = document.getElementById('pisteet-grid');
+  const otsikko = document.getElementById('paivamaara-otsikko');
+
+  otsikko.textContent = fmtOtsikko(nykyinenPvm);
+  if (!hiljainen) {
+    statusMsg.textContent = 'Ladataan kapasiteettia...';
+    statusMsg.style.display = 'block';
+    grid.style.display = 'none';
+  }
+
+  try {
+    // KORJAUS 28.7.2026: yksi ainoa pyyntö nyt kahden sijaan — sijoitukset
+    // (asentajasiirrot) tulevat samassa vastauksessa haeKapasiteettiLandingPage-
+    // toiminnon mukana (ks. Koodi.gs). Nopeampi JA turvallisempi (ei enää
+    // kahta erillistä pyyntöä, jotka joskus aiheuttivat "Unexpected token '<'"
+    // -virheen Apps Scriptin echo-proxyssa).
+    const url = WEBHOOK_URL + '?action=haeKapasiteettiLandingPage&token=' + encodeURIComponent(accessToken)
+      + '&paivamaara=' + fmtDate(nykyinenPvm);
+    const data = await fetchJson(url);
+
+    // UUSI 28.7.2026: jos joku uudempi pyyntö on ehtinyt käynnistyä sen
+    // jälkeen kun tämä lähti, tämä vastaus on vanhentunut — ei kirjoiteta
+    // sillä DOMia yli, hiljainen paluu.
+    if (omaPyyntoId !== viimeisinPyyntoId) return;
+
+    if (!data.ok) {
+      statusMsg.textContent = 'Virhe: ' + (data.error || 'tuntematon');
+      return;
+    }
+
+    // UUSI 28.7.2026: päivän siirrot talteen "Peru siirto" -nappia varten
+    // (tarvitaan asentajaId -> sijoitusId[] -yhteys, koska poisto tehdään
+    // rivi kerrallaan sijoitusId:llä, ei asentajan mukaan suoraan).
+    paivanSijoitukset = data.sijoitukset || [];
+
+    grid.innerHTML = '';
+    Object.keys(data.pisteet).forEach(pisteNimi => {
+      grid.appendChild(renderoiPisteKortti(pisteNimi, data.pisteet[pisteNimi]));
+    });
+    // UUSI 15.7.2026: Puuttuvat resurssit -kortti lisätään VIIMEISENÄ,
+    // yhtenä korttina muiden pistekorttien joukossa (ei enää erillinen
+    // koko sivun levyinen palkki).
+    grid.appendChild(renderoiPuuttuvatResurssitKortti(data.puuttuvatResurssitSarakkeet));
+
+    statusMsg.style.display = 'none';
+    grid.style.display = 'flex';
+
+  } catch (e) {
+    if (omaPyyntoId !== viimeisinPyyntoId) return; // vanhentunut, ohitetaan virhekin
+    if (e.message === 'ISTUNTO_VANHENTUNUT') return; // fetchJson näytti jo oman viestinsä
+    if (!hiljainen) statusMsg.textContent = 'Hakuvirhe: ' + e.message;
+  }
+}
+
+// UUSI 28.7.2026: siirtää yhden ruudun (1 kpl) raahatulta asentajalta
+// kohdepisteeseen. Palvelin tarkistaa uudelleen kaiken (Piste-tyyppi=Oma,
+// Sallitut pisteet, kapasiteetti.muokkaa-oikeus) — täällä ei toisteta niitä
+// tarkistuksia, vain näytetään virhe jos palvelin hylkää pyynnön.
+async function siirraRuutuPalvelimelle(asentajaId, kohdePiste) {
+  try {
+    const resp = await fetchJson(WEBHOOK_URL + '?action=siirraRuutu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        token: accessToken,
+        asentajaId: asentajaId,
+        kohdePiste: kohdePiste,
+        paivamaara: fmtDate(nykyinenPvm),
+        ruutuja: 1,
+      }),
+    });
+    if (!resp.ok) {
+      alert('Siirto epäonnistui: ' + (resp.error || 'tuntematon virhe'));
+      return;
+    }
+    await lataaKapasiteetti(true);
+  } catch (e) {
+    if (e.message === 'ISTUNTO_VANHENTUNUT') return;
+    alert('Siirto epäonnistui: ' + e.message);
+  }
+}
+
+// UUSI 28.7.2026: peruu KAIKKI kyseisen asentajan tämän päivän siirrot
+// (kaikkiin kohdepisteisiin). Yksinkertaistus: käyttöliittymässä ei tällä
+// hetkellä ole helppoa tapaa erottaa "peru vain tämä yksi siirto" muista,
+// joten nappi peruu koko päivän siirrot kerralla asentajaa kohti.
+async function peruSiirrotAsentajalta(asentajaId) {
+  const omat = paivanSijoitukset.filter(s => s.asentajaId === asentajaId);
+  if (omat.length === 0) return;
+  if (!confirm('Perutaanko kaikki tämän asentajan tämän päivän siirrot (' + omat.length + ' kpl)?')) return;
+  try {
+    for (const sijoitus of omat) {
+      const resp = await fetchJson(WEBHOOK_URL + '?action=peruSiirto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ token: accessToken, sijoitusId: sijoitus.id }),
+      });
+      if (!resp.ok) {
+        alert('Perumisessa ongelma: ' + (resp.error || 'tuntematon virhe'));
+        return;
+      }
+    }
+    await lataaKapasiteetti(true);
+  } catch (e) {
+    if (e.message === 'ISTUNTO_VANHENTUNUT') return;
+    alert('Peruminen epäonnistui: ' + e.message);
+  }
+}
+
+document.getElementById('edellinen-btn').addEventListener('click', () => {
+  nykyinenPvm.setDate(nykyinenPvm.getDate() - 1);
+  lataaKapasiteetti();
+});
+document.getElementById('seuraava-btn').addEventListener('click', () => {
+  nykyinenPvm.setDate(nykyinenPvm.getDate() + 1);
+  lataaKapasiteetti();
+});
+document.getElementById('tanaan-btn').addEventListener('click', () => {
+  nykyinenPvm = new Date();
+  lataaKapasiteetti();
+});
+document.getElementById('paivita-btn').addEventListener('click', lataaKapasiteetti);
+
+function initGoogleAuth() {
+  const istuntoId = localStorage.getItem('stm_istunto');
+  if (!istuntoId) {
+    window.location.href = 'index.html';
+    return;
+  }
+  accessToken = istuntoId;
+  lataaKapasiteetti();
+}
+initGoogleAuth();
+</script>
+
+</body>
+</html>
