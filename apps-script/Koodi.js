@@ -1937,16 +1937,27 @@ function luoIstunto(email) {
   }
 }
 
+// NOPEUTUS 17.9.2026: tämä funktio lukee istunnot Drivesta, mikä on hidas
+// toimenpide (usein 1-3s), ja sitä kutsutaan JOKAISESSA kirjautuneessa
+// pyynnössä koko sovelluksessa (haeKirjautuneenSahkoposti-kautta, 38
+// paikassa). Välimuistitetaan tulos muutamaksi minuutiksi istunto-id:n
+// perusteella (valimuistista-apufunktio, jaettu CacheService-välimuisti,
+// oletuksena 10 min). Istunto on muutenkin voimassa 8h, joten muutaman
+// minuutin viive vanhenemisen huomaamisessa on turvallista — järjestelmässä
+// ei myöskään ole erillistä palvelinpuolista uloskirjautumista, joten
+// tämä ei koskaan estä ketään kirjautumasta ulos nopeammin kuin ennenkään.
 function tarkistaIstunto(istuntoId) {
   if (!istuntoId) return null;
-  const { istunnot } = lueIstuntoTiedosto();
-  const nyt = Date.now();
-  const loydetty = istunnot.find(function(i) {
-    return i.istuntoId === istuntoId;
-  });
-  if (!loydetty) return null;
-  if ((nyt - loydetty.luotu) >= ISTUNNON_KESTO_MS) return null;
-  return loydetty.email || null;
+  return valimuistista('istunto_' + istuntoId, function() {
+    const { istunnot } = lueIstuntoTiedosto();
+    const nyt = Date.now();
+    const loydetty = istunnot.find(function(i) {
+      return i.istuntoId === istuntoId;
+    });
+    if (!loydetty) return null;
+    if ((nyt - loydetty.luotu) >= ISTUNNON_KESTO_MS) return null;
+    return loydetty.email || null;
+  }, true);
 }
 
 function lueKayttajaLista() {
