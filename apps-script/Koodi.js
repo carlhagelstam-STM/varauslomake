@@ -4524,7 +4524,7 @@ function luoVakuutusPdf(tyoId) {
 // TESTIFUNKTIO — aja ▶-napista Apps Script -editorissa KERRAN deployn
 // jälkeen. Tämä myös laukaisee Google-luvan pyynnön Drive-käytölle.
 function testaaVakuutusPdf() {
-  const tyoRivi = airtableGet(TABLE_TYOTILAUKSET, `{varausnumero}="STM-2026-V00116"`);
+  const tyoRivi = airtableGet(TABLE_TYOTILAUKSET, `{varausnumero}="STM-2026-V00145"`);
   if (!tyoRivi) {
     Logger.log('Ei löytynyt testityötä. Anna toinen varausnumero jolla on vakuutustapaus + Vakuutusyhtiö-laskurivejä.');
     return 'Ei testidataa saatavilla.';
