@@ -359,21 +359,6 @@ function doGet(e) {
               fennoaVaroitus = 'Fennoa-luonnosta ei saatu luotua: ' + fennoaTulos.error;
               lisaaMuokkausHistoriaan(id, email, '⚠️ ' + fennoaVaroitus);
             }
-          } else if (onkoVakuutustapaus) {
-            // VAKUUTUS-PDF 17.9.2026: Finvoice-XML:ää ei tänään lähetetä
-            // minnekään automaattisesti (ei operaattoria) — tehdään sen
-            // sijaan selkeä PDF ja tallennetaan Google Driveen. Ei mene
-            // vakuutusyhtiölle mihinkään automaattisesti.
-            try {
-              const pdfTulos = luoVakuutusPdf(id);
-              if (pdfTulos.ok) {
-                lisaaMuokkausHistoriaan(id, email, '📄 Vakuutuslasku (PDF) tallennettu Driveen: ' + pdfTulos.tiedostonimi);
-              } else {
-                lisaaMuokkausHistoriaan(id, email, '⚠️ Vakuutuslaskun PDF:n luonti epäonnistui: ' + pdfTulos.error);
-              }
-            } catch (pdfErr) {
-              lisaaMuokkausHistoriaan(id, email, '⚠️ Vakuutuslaskun PDF:n luonti epäonnistui: ' + pdfErr.message);
-            }
           }
         } catch (fennoaErr) {
           fennoaVaroitus = 'Fennoa-luonnoksen yritys epäonnistui: ' + fennoaErr.message;
@@ -4400,140 +4385,6 @@ ${invoiceRowsXml}<EpiDetails>
   return { ok: true, xml: xml };
 }
 
-// VAKUUTUS-PDF 17.9.2026: kevyt korvike Finvoice-verkkolaskun lähetykselle,
-// koska varsinaista lähetyskanavaa (operaattori/Innovoice) ei ole käytössä.
-// Tekee selkeän PDF-laskun ja tallentaa sen Google Driveen. EI lähetä
-// mitään vakuutusyhtiölle — ihminen hakee PDF:n Drivesta ja lähettää
-// eteenpäin haluamallaan tavalla.
-function haeTaiLuoVakuutuslaskuKansio() {
-  const props = PropertiesService.getScriptProperties();
-  const tallennettuId = props.getProperty('VAKUUTUSLASKUT_KANSIO_ID');
-  if (tallennettuId) {
-    try {
-      return DriveApp.getFolderById(tallennettuId);
-    } catch (e) {
-      // kansio poistettu/siirretty Drivessa — luodaan uusi alle
-    }
-  }
-  const kansio = DriveApp.createFolder('Vakuutuslaskut (STM Varauslomake)');
-  props.setProperty('VAKUUTUSLASKUT_KANSIO_ID', kansio.getId());
-  return kansio;
-}
-
-function luoVakuutusPdf(tyoId) {
-  const tyoRecord = airtableGetById(TABLE_TYOTILAUKSET, tyoId);
-  if (!tyoRecord) return { ok: false, error: 'Työtilausta ei löytynyt: ' + tyoId };
-  const tf = tyoRecord.fields;
-
-  const vakuutusRivi = haeVakuutustapausTyolle(tyoId);
-  if (!vakuutusRivi) return { ok: false, error: 'Työllä ei ole vakuutustapausta.' };
-  const vf = vakuutusRivi.fields;
-
-  let vakuutusyhtioNimi = '';
-  const vyIds = vf['Vakuutusyhtiö'] || [];
-  if (vyIds.length > 0) {
-    const vyRecord = airtableGetById(TABLE_VAKUUTUSYHTIOT, vyIds[0]);
-    if (vyRecord) vakuutusyhtioNimi = vyRecord.fields['yhtiön nimi'] || '';
-  }
-
-  let asiakas = null;
-  const asiakasIds = tf['Asiakas'] || [];
-  if (asiakasIds.length > 0) {
-    const asiakasRecord = airtableGetById(TABLE_ASIAKKAAT, asiakasIds[0]);
-    if (asiakasRecord) asiakas = asiakasRecord.fields;
-  }
-
-  let auto = null;
-  const autoIds = tf['auto'] || [];
-  if (autoIds.length > 0) {
-    const autoRecord = airtableGetById(TABLE_AUTOT, autoIds[0]);
-    if (autoRecord) auto = autoRecord.fields;
-  }
-
-  const vakuutusLaskurivit = haeKaikkiLaskurivitTyolle(tyoId).filter(r => r.fields['Maksaja'] === 'Vakuutusyhtiö');
-  if (vakuutusLaskurivit.length === 0) {
-    return { ok: false, error: 'Työltä puuttuu vakuutusyhtiölle osoitetut laskurivit.' };
-  }
-
-  let nettoYht = 0, alvYht = 0;
-  const rivitHtml = vakuutusLaskurivit.map(r => {
-    const maara = r.fields['Määrä'] || 1;
-    const netto = parseFloat(r.fields['Yksikköhinta (alv 0%)']) || 0;
-    const alvP = r.fields['ALV %'] || 25.5;
-    const alv = netto * maara * (alvP / 100);
-    nettoYht += netto * maara;
-    alvYht += alv;
-    return '<tr>' +
-      '<td>' + xmlEscape(r.fields['Nimike'] || '') + '</td>' +
-      '<td style="text-align:right;">' + maara + '</td>' +
-      '<td style="text-align:right;">' + netto.toFixed(2) + ' €</td>' +
-      '<td style="text-align:right;">' + alvP + ' %</td>' +
-      '<td style="text-align:right;">' + (netto * maara).toFixed(2) + ' €</td>' +
-      '</tr>';
-  }).join('');
-  const bruttoYht = nettoYht + alvYht;
-
-  const asiakasNimi = asiakas
-    ? (asiakas['asiakastyyppi'] === 'Yritys' ? (asiakas['yrityksen nimi'] || '') : [asiakas['etunimi'], asiakas['sukunimi']].filter(Boolean).join(' '))
-    : '';
-  const autoTeksti = auto ? [auto['merkki'], auto['malli'], auto['vuosimalli']].filter(Boolean).join(' ') : '';
-  const pvm = Utilities.formatDate(new Date(), 'Europe/Helsinki', 'd.M.yyyy');
-
-  const html = '<html><body style="font-family:Arial,sans-serif;font-size:12px;color:#111;padding:24px;">' +
-    '<h2 style="margin-bottom:0;">' + xmlEscape(STM_NIMI) + '</h2>' +
-    '<p style="margin-top:2px;color:#555;">Y-tunnus ' + xmlEscape(STM_YTUNNUS) + ' · ' + xmlEscape(STM_KATUOSOITE) + ', ' + xmlEscape(STM_POSTINUMERO) + ' ' + xmlEscape(STM_KAUPUNKI) + '</p>' +
-    '<hr>' +
-    '<table style="width:100%;margin-top:12px;"><tr>' +
-    '<td style="vertical-align:top;width:50%;"><b>Laskutettava</b><br>' + xmlEscape(vakuutusyhtioNimi) + '</td>' +
-    '<td style="vertical-align:top;"><b>Vahinkotiedot</b><br>' +
-    'Varausnumero: ' + xmlEscape(tf['varausnumero'] || '') + '<br>' +
-    'Asiakaskoodi: ' + xmlEscape(tf['asiakaskoodi'] || '') + '<br>' +
-    'Rekisterinumero: ' + xmlEscape(tf['rekisterinumero'] || '') + '<br>' +
-    'Vahinkotunnus: ' + xmlEscape(vf['Vahinkotunnus'] || '') + '<br>' +
-    'Vakuutustunnus: ' + xmlEscape(vf['Vakuutustunnus'] || '') + '<br>' +
-    'Omavastuu: ' + (parseFloat(vf['Omavastuu']) || 0).toFixed(2) + ' €<br>' +
-    'Päivämäärä: ' + pvm +
-    '</td></tr></table>' +
-    '<p><b>Asiakas / auto:</b> ' + xmlEscape(asiakasNimi) + ' — ' + xmlEscape(autoTeksti) + '</p>' +
-    '<table style="width:100%;border-collapse:collapse;margin-top:12px;">' +
-    '<tr style="background:#eee;"><th style="text-align:left;padding:4px;">Nimike</th>' +
-    '<th style="text-align:right;padding:4px;">Määrä</th>' +
-    '<th style="text-align:right;padding:4px;">á-hinta (alv 0%)</th>' +
-    '<th style="text-align:right;padding:4px;">ALV</th>' +
-    '<th style="text-align:right;padding:4px;">Yhteensä (alv 0%)</th></tr>' +
-    rivitHtml +
-    '</table>' +
-    '<table style="width:100%;margin-top:8px;">' +
-    '<tr><td style="text-align:right;">Yhteensä (alv 0%):</td><td style="text-align:right;width:100px;">' + nettoYht.toFixed(2) + ' €</td></tr>' +
-    '<tr><td style="text-align:right;">ALV:</td><td style="text-align:right;">' + alvYht.toFixed(2) + ' €</td></tr>' +
-    '<tr><td style="text-align:right;"><b>Yhteensä:</b></td><td style="text-align:right;"><b>' + bruttoYht.toFixed(2) + ' €</b></td></tr>' +
-    '</table>' +
-    '<p style="margin-top:20px;color:#888;font-size:10px;">Tämä PDF on sisäinen tuki laskutukselle — ei automaattisesti lähetetty vakuutusyhtiölle.</p>' +
-    '</body></html>';
-
-  const pdfBlob = Utilities.newBlob(html, 'text/html', 'vakuutuslasku.html').getAs('application/pdf');
-  const tiedostonimi = 'Vakuutuslasku_' + (tf['varausnumero'] || tyoId) + '_' + (tf['rekisterinumero'] || '') + '.pdf';
-  pdfBlob.setName(tiedostonimi);
-
-  const kansio = haeTaiLuoVakuutuslaskuKansio();
-  const tiedosto = kansio.createFile(pdfBlob);
-
-  return { ok: true, tiedostoId: tiedosto.getId(), tiedostoUrl: tiedosto.getUrl(), tiedostonimi: tiedostonimi };
-}
-
-// TESTIFUNKTIO — aja ▶-napista Apps Script -editorissa KERRAN deployn
-// jälkeen. Tämä myös laukaisee Google-luvan pyynnön Drive-käytölle.
-function testaaVakuutusPdf() {
-  const tyoRivi = airtableGet(TABLE_TYOTILAUKSET, `{varausnumero}="STM-2026-V00145"`);
-  if (!tyoRivi) {
-    Logger.log('Ei löytynyt testityötä. Anna toinen varausnumero jolla on vakuutustapaus + Vakuutusyhtiö-laskurivejä.');
-    return 'Ei testidataa saatavilla.';
-  }
-  const tulos = luoVakuutusPdf(tyoRivi.id);
-  Logger.log(JSON.stringify(tulos, null, 2));
-  return JSON.stringify(tulos, null, 2);
-}
-
 // FENNOA-INTEGRAATIO 26.8.2026 — MYYNTILASKUJEN LÄHETYS (EI-VAKUUTUSLASKUT)
 //
 // TÄRKEÄ RAJAUS: Fennoa on tarkoitettu MUULLE laskutukselle kuin
@@ -4692,7 +4543,6 @@ function koostaFennoaLaskuData(tyoRecord, asiakas) {
     order_identifier: tf['varausnumero'] || '',
     row: rows,
     laskuriviIdt: laskurivit.map(r => r.id),  // ei lähetetä Fennoalle, käytetään vain merkitsemään rivit laskutetuiksi lähetyksen jälkeen
-    kaikkiKateinenKortti: laskurivit.every(r => r.fields['Maksaja'] === 'Käteinen/Kortti'),
   };
 }
 
@@ -4772,36 +4622,6 @@ function lahetaFennoaLasku(tyoId) {
       });
     }
 
-    // KÄTEINEN/KORTTI 17.9.2026: jos KOKO tämän laskun rivit ovat
-    // Käteinen/Kortti, raha on jo saatu kädessä/korttiautomaatilla —
-    // merkitään lasku heti maksetuksi Fennoan maksu-API:lla. Jos laskulla
-    // on sekaisin muitakin rivejä, EI merkitä maksetuksi (osa summasta ei
-    // silloin oikeasti ole maksettu vielä).
-    if (laskuData.kaikkiKateinenKortti && laskuId) {
-      try {
-        const summaYhteensa = laskuData.row.reduce((s, r) =>
-          s + (parseFloat(r.price) * r.quantity * (1 + parseFloat(r.vatpercent) / 100)), 0
-        ).toFixed(2);
-        const maksuResp = UrlFetchApp.fetch(FENNOA_BASE_URL + '/sales_api/add/payment', {
-          method: 'POST',
-          contentType: 'application/json',
-          headers: { 'Authorization': fennoaAuthHeader() },
-          payload: JSON.stringify({
-            invoice_no: laskuId,
-            payment_date: Utilities.formatDate(new Date(), 'Europe/Helsinki', 'yyyy-MM-dd'),
-            sum: summaYhteensa,
-            payment_type: 4, // kortti — Käteinen ja Kortti ovat tänään sama Maksaja-vaihtoehto
-            is_factoring: false,
-            description: 'Maksettu asennuspisteessä'
-          }),
-          muteHttpExceptions: true
-        });
-        Logger.log('Maksumerkintä (' + tyoId + '): HTTP ' + maksuResp.getResponseCode() + ' ' + maksuResp.getContentText().slice(0, 300));
-      } catch (maksuErr) {
-        Logger.log('HUOM: maksumerkintä epäonnistui (' + tyoId + '): ' + maksuErr.message);
-      }
-    }
-
     return { ok: true, vaihe: 'fennoa_lahetys', vastaus: data, lahetettyData: laskuData };
 
   } catch (err) {
@@ -4814,9 +4634,9 @@ function lahetaFennoaLasku(tyoId) {
 // ja jollain ei-kriittisellä testityöllä. ÄLÄ aja tuotantotunnuksilla
 // ennen kuin testiympäristössä on nähty onnistunut lasku Fennoan puolella.
 function testaaFennoaLahetys() {
-  const tyoRivi = airtableGet(TABLE_TYOTILAUKSET, `{varausnumero}="STM-2026-V00174"`);
+  const tyoRivi = airtableGet(TABLE_TYOTILAUKSET, `{varausnumero}="STM-2026-V00166"`);
   if (!tyoRivi) {
-    Logger.log('Ei löytynyt testityötä STM-2026-V00174. Anna toinen varausnumero.');
+    Logger.log('Ei löytynyt testityötä STM-2026-V00166. Anna toinen varausnumero.');
     return 'Ei testidataa saatavilla.';
   }
 
