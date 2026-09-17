@@ -4813,9 +4813,9 @@ function lahetaFennoaLasku(tyoId) {
 // ja jollain ei-kriittisellä testityöllä. ÄLÄ aja tuotantotunnuksilla
 // ennen kuin testiympäristössä on nähty onnistunut lasku Fennoan puolella.
 function testaaFennoaLahetys() {
-  const tyoRivi = airtableGet(TABLE_TYOTILAUKSET, `{varausnumero}="STM-2026-V00166"`);
+  const tyoRivi = airtableGet(TABLE_TYOTILAUKSET, `{varausnumero}="STM-2026-V00174"`);
   if (!tyoRivi) {
-    Logger.log('Ei löytynyt testityötä STM-2026-V00166. Anna toinen varausnumero.');
+    Logger.log('Ei löytynyt testityötä STM-2026-V00174. Anna toinen varausnumero.');
     return 'Ei testidataa saatavilla.';
   }
 
