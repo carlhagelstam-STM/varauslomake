@@ -4791,6 +4791,7 @@ function lahetaFennoaLasku(tyoId) {
             payment_date: Utilities.formatDate(new Date(), 'Europe/Helsinki', 'yyyy-MM-dd'),
             sum: summaYhteensa,
             payment_type: 4, // kortti — Käteinen ja Kortti ovat tänään sama Maksaja-vaihtoehto
+            is_factoring: false,
             description: 'Maksettu asennuspisteessä'
           }),
           muteHttpExceptions: true
