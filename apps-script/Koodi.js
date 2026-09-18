@@ -331,7 +331,45 @@ function doGet(e) {
         return jsonVastaus({ ok: false, error: 'Ei oikeutta tähän asennuspisteeseen (' + tyoPiste + ')' });
       }
 
-      const paivitetty = airtablePatch(TABLE_TYOTILAUKSET, id, { 'tila': 'Valmis' });
+      // KORJAUS 18.9.2026: idempotenssi-suoja + lukko. Ilman tätä sama työ pystyi
+      // laukaisemaan "Merkitse valmiiksi" -toiminnon kahdesti (esim. tuplaklikkaus,
+      // hidas verkko + uusi yritys, tai kaksi lähes samanaikaista pyyntöä), jolloin
+      // koko laskutusrutiini (Fennoa-luonnos, vakuutus-PDF, Finvoice, vakuutusyhtiön
+      // Fennoa-luonnos) ajettiin uudestaan ja syntyi duplikaattilaskuja (havaittu
+      // STM-2026-V00185:ssä). LockService varmistaa, ettei kaksi lähes yhtäaikaista
+      // pyyntöä pääse molemmat ohittamaan tila==='Valmis'-tarkistusta ennen kuin
+      // kumpikaan on ehtinyt kirjoittaa Airtableen. Lukko vapautetaan heti tilan
+      // päivityksen jälkeen — itse laskutuslogiikka (ulkoiset API-kutsut) ei odota
+      // lukon takana, koska se veisi turhaan aikaa muilta pyynnöiltä.
+      const valmiiksiLukko = LockService.getScriptLock();
+      try {
+        valmiiksiLukko.waitLock(15000);
+      } catch (lukkoVirhe) {
+        Logger.log('Merkitse valmiiksi -lukkoa ei saatu 15 s:ssa työlle ' + id + ': ' + lukkoVirhe.message);
+      }
+
+      let paivitetty;
+      let jouduttiinToistamaan = false;
+      try {
+        const tuoreTyoRecord = airtableGetById(TABLE_TYOTILAUKSET, id) || tyoRecord;
+        if (tuoreTyoRecord.fields['tila'] === 'Valmis') {
+          jouduttiinToistamaan = true;
+        } else {
+          paivitetty = airtablePatch(TABLE_TYOTILAUKSET, id, { 'tila': 'Valmis' });
+        }
+      } finally {
+        try { valmiiksiLukko.releaseLock(); } catch (e) {}
+      }
+
+      if (jouduttiinToistamaan) {
+        return jsonVastaus({
+          ok: true,
+          id: id,
+          tila: 'Valmis',
+          huomio: 'Työ oli jo merkitty valmiiksi aiemmin — laskutusta ei ajettu uudelleen (duplikaattien esto).'
+        });
+      }
+
       if (paivitetty && paivitetty.id) {
         lisaaMuokkausHistoriaan(id, email, 'Merkitsi työn valmiiksi');
 
@@ -5044,7 +5082,6 @@ function koostaVakuutusFennoaLaskuData(tyoRecord, vakuutusyhtioFields) {
 
   const yTunnus = String(vakuutusyhtioFields['Y-tunnus'] || '').trim();
   const osoiteOsat = jaaOsoitePostinumeroKaupunki(vakuutusyhtioFields['laskutusosoite']);
-  const verkkolasku = String(vakuutusyhtioFields['verkkolasku'] || '').trim();
 
   if (!osoiteOsat.postinumero || !osoiteOsat.kaupunki) {
     throw new Error('Vakuutusyhtiöltä (' + (vakuutusyhtioFields['yhtiön nimi'] || '?') +
@@ -5066,17 +5103,17 @@ function koostaVakuutusFennoaLaskuData(tyoRecord, vakuutusyhtioFields) {
     order_identifier: tf['varausnumero'] || '',
     row: rows,
     laskuriviIdt: vakuutusRivit.map(r => r.id),
+    // KORJAUS 19.9.2026: Carl vahvisti (STM-2026-V00185-testin jälkeen), että
+    // lähetystavaksi halutaan nimenomaan "Lähetetään käsin" — Fennoan
+    // dokumentaation mukaan tämä on API-arvoltaan 'manual' ("invoice is not
+    // sent but possible delivery error message is cleared"). Aiempi yritys
+    // ('einvoice') EI ole Fennoan API:n tunnistama arvo, minkä vuoksi lasku
+    // päätyi luonnoksena tilille asetettuun oletukseen ("Postitse") sen
+    // sijaan että lähetystapa olisi asettunut oikein. 'manual' toimii aina,
+    // eikä vaadi verkkolasku-/sähköpostiosoitetta — sopii hyvin myös
+    // yhtiöille, joilta 'verkkolasku'-kenttä puuttuu.
+    delivery_method: 'manual',
   };
-
-  // Ei sähköpostiosoitetta vakuutusyhtiölle, joten ei voida käyttää
-  // delivery_method:'email' (Fennoa vaatii silloin kelvollisen osoitteen).
-  // Käytetään verkkolaskuosoitetta jos se on tiedossa, muuten jätetään
-  // delivery_method kokonaan pois ja annetaan Fennoan käyttää tilin omaa
-  // oletusta — kumpikaan tapa ei lähetä mitään, koska lasku jää luonnokseksi.
-  if (verkkolasku) {
-    laskuData.delivery_method = 'einvoice';
-    laskuData.einvoice_address = verkkolasku;
-  }
 
   return laskuData;
 }
