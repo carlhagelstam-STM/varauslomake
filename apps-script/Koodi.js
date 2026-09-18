@@ -396,6 +396,21 @@ function doGet(e) {
             } catch (finvoiceErr) {
               lisaaMuokkausHistoriaan(id, email, '⚠️ Finvoice-tiedoston luonti epäonnistui: ' + finvoiceErr.message);
             }
+            // VAKUUTUSYHTIÖN FENNOA-LUONNOS 18.9.2026: jää luonnokseksi
+            // Fennoaan (ei hyväksytä, ei lähetetä) — Carl vahvisti että
+            // sekä asiakkaan että vakuutusyhtiön lasku saavat toistaiseksi
+            // jäädä luonnokseksi, ei tarvitse vielä ratkaista oikeaa
+            // delivery_method-arvoa "lähetetään käsin" -tilalle.
+            try {
+              const vakFennoaTulos = luoVakuutusFennoaLasku(id);
+              if (vakFennoaTulos.ok) {
+                lisaaMuokkausHistoriaan(id, email, '🧾 Vakuutusyhtiön Fennoa-luonnos luotu automaattisesti');
+              } else {
+                lisaaMuokkausHistoriaan(id, email, '⚠️ Vakuutusyhtiön Fennoa-luonnoksen luonti epäonnistui: ' + vakFennoaTulos.error);
+              }
+            } catch (vakFennoaErr) {
+              lisaaMuokkausHistoriaan(id, email, '⚠️ Vakuutusyhtiön Fennoa-luonnoksen luonti epäonnistui: ' + vakFennoaErr.message);
+            }
           }
         } catch (fennoaErr) {
           fennoaVaroitus = 'Fennoa-luonnoksen yritys epäonnistui: ' + fennoaErr.message;
@@ -4652,6 +4667,7 @@ function testaaMolemmatLaskutusreitit() {
   if (onkoVakuutustapaus && vakuutusRivit.length > 0) {
     tulokset.vakuutusPdf = luoVakuutusPdf(id);
     tulokset.vakuutusFinvoice = luoVakuutusFinvoice(id);
+    tulokset.vakuutusFennoa = luoVakuutusFennoaLasku(id);
   }
   Logger.log(JSON.stringify(tulokset, null, 2));
   return JSON.stringify(tulokset, null, 2);
@@ -4967,6 +4983,133 @@ function lahetaFennoaLasku(tyoId) {
 
   } catch (err) {
     Logger.log('Fennoa-lähetys epäonnistui (' + tyoId + '): ' + err.message);
+    return { ok: false, vaihe: 'verkko', error: err.message };
+  }
+}
+
+// VAKUUTUSYHTIÖN FENNOA-LUONNOS 18.9.2026 (Carlin pyynnöstä): sama
+// tekniikka kuin koostaFennoaLaskuData/lahetaFennoaLasku, mutta
+// vastaanottajana on Vakuutusyhtiö-tietue (esim. "If") eikä asiakas, ja
+// riveinä käytetään VAIN Maksaja=Vakuutusyhtiö-rivejä (Lasi/Työ/Tarvikkeet/
+// Kalibrointi + Omavastuu-vähennys). JÄÄ TARKOITUKSELLA LUONNOKSEKSI —
+// EI hyväksytä (do/approve) eikä lähetetä mitenkään automaattisesti,
+// täsmälleen kuten tavallinen asiakaslaskukin jää luonnokseksi tänään.
+// Carl käy itse hyväksymässä/käsittelemässä sen Fennoassa kun haluaa.
+function koostaVakuutusFennoaLaskuData(tyoRecord, vakuutusyhtioFields) {
+  const tf = tyoRecord.fields;
+  const vakuutusRivit = haeKaikkiLaskurivitTyolle(tyoRecord.id)
+    .filter(r => r.fields['Maksaja'] === 'Vakuutusyhtiö');
+
+  if (vakuutusRivit.length === 0) {
+    throw new Error('Työltä puuttuu Vakuutusyhtiö-maksajan Laskurivit — ei voida muodostaa vakuutusyhtiön Fennoa-luonnosta.');
+  }
+
+  const rows = vakuutusRivit.map(r => ({
+    name: r.fields['Nimike'] || 'Rivi',
+    description: '',
+    quantity: r.fields['Määrä'] || 1,
+    price: (parseFloat(r.fields['Yksikköhinta (alv 0%)']) || 0).toFixed(2),
+    unit: 'kpl',
+    vatpercent: String(r.fields['ALV %'] || 25.5)
+  }));
+
+  const invoiceDate = Utilities.formatDate(new Date(), 'Europe/Helsinki', 'yyyy-MM-dd');
+  const dueDate = Utilities.formatDate(
+    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'Europe/Helsinki', 'yyyy-MM-dd'
+  );
+
+  const yTunnus = String(vakuutusyhtioFields['Y-tunnus'] || '').trim();
+
+  return {
+    customer_no: '',
+    name: vakuutusyhtioFields['yhtiön nimi'] || '',
+    address: vakuutusyhtioFields['laskutusosoite'] || '',
+    postalcode: '',
+    city: '',
+    country: 'FI',
+    vat_number: yTunnus ? ('FI' + yTunnus.replace('-', '')) : '',
+    account_type_id: 1, // yritys
+    invoice_date: invoiceDate,
+    due_date: dueDate,
+    delivery_method: 'email', // ei väliä — jää joka tapauksessa luonnokseksi, ei lähde mihinkään ilman erillistä hyväksyntää+lähetystä
+    einvoice_address: '',
+    locale: 'fi',
+    order_identifier: tf['varausnumero'] || '',
+    row: rows,
+    laskuriviIdt: vakuutusRivit.map(r => r.id),
+  };
+}
+
+function luoVakuutusFennoaLasku(tyoId) {
+  const tyoRecord = airtableGetById(TABLE_TYOTILAUKSET, tyoId);
+  if (!tyoRecord) {
+    return { ok: false, vaihe: 'haku', error: 'Työtilausta ei löytynyt: ' + tyoId };
+  }
+
+  const vakuutusRivi = haeVakuutustapausTyolle(tyoId);
+  if (!vakuutusRivi) {
+    return { ok: false, vaihe: 'haku', error: 'Työllä ei ole vakuutustapausta.' };
+  }
+  const vyIds = vakuutusRivi.fields['Vakuutusyhtiö'] || [];
+  if (vyIds.length === 0) {
+    return { ok: false, vaihe: 'haku', error: 'Vakuutustapaukselta puuttuu Vakuutusyhtiö-linkki.' };
+  }
+  const vyRecord = airtableGetById(TABLE_VAKUUTUSYHTIOT, vyIds[0]);
+  if (!vyRecord) {
+    return { ok: false, vaihe: 'haku', error: 'Vakuutusyhtiön tietuetta ei löytynyt.' };
+  }
+
+  let laskuData;
+  try {
+    laskuData = koostaVakuutusFennoaLaskuData(tyoRecord, vyRecord.fields);
+  } catch (kokoamisVirhe) {
+    return { ok: false, vaihe: 'laskurivit', error: kokoamisVirhe.message };
+  }
+
+  try {
+    const resp = UrlFetchApp.fetch(FENNOA_BASE_URL + '/sales_api/add', {
+      method: 'POST',
+      contentType: 'application/json',
+      headers: { 'Authorization': fennoaAuthHeader() },
+      payload: JSON.stringify(laskuData),
+      muteHttpExceptions: true
+    });
+
+    const koodi = resp.getResponseCode();
+    const teksti = resp.getContentText();
+    Logger.log('Vakuutusyhtiön Fennoa-luonnos (' + tyoId + '), HTTP ' + koodi + ': ' + teksti.slice(0, 500));
+
+    if (koodi < 200 || koodi >= 300) {
+      return {
+        ok: false,
+        vaihe: 'fennoa_lahetys',
+        httpKoodi: koodi,
+        error: 'Fennoa vastasi HTTP ' + koodi + ': ' + teksti.slice(0, 300)
+      };
+    }
+
+    let data = null;
+    try {
+      data = JSON.parse(teksti);
+    } catch (parseErr) {
+      data = null;
+    }
+
+    const laskuId = (data && data.id) ? String(data.id) : '';
+    if (laskuData.laskuriviIdt && laskuData.laskuriviIdt.length > 0) {
+      laskuData.laskuriviIdt.forEach(riviId => {
+        try {
+          airtablePatch('Laskurivit', riviId, { 'Laskutettu': true, 'Lasku-ID': laskuId });
+        } catch (merkintaVirhe) {
+          Logger.log('HUOM: Vakuutusrivin ' + riviId + ' merkintä laskutetuksi epäonnistui (' + tyoId + '): ' + merkintaVirhe.message);
+        }
+      });
+    }
+
+    return { ok: true, vaihe: 'fennoa_lahetys', vastaus: data, lahetettyData: laskuData };
+
+  } catch (err) {
+    Logger.log('Vakuutusyhtiön Fennoa-luonnoksen lähetys epäonnistui (' + tyoId + '): ' + err.message);
     return { ok: false, vaihe: 'verkko', error: err.message };
   }
 }
