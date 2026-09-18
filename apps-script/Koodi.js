@@ -4995,6 +4995,30 @@ function lahetaFennoaLasku(tyoId) {
 // EI hyväksytä (do/approve) eikä lähetetä mitenkään automaattisesti,
 // täsmälleen kuten tavallinen asiakaslaskukin jää luonnokseksi tänään.
 // Carl käy itse hyväksymässä/käsittelemässä sen Fennoassa kun haluaa.
+// KORJAUS 18.9.2026: Fennoa vastasi HTTP 400:llä ensimmäisellä yrityksellä
+// (STM-2026-V00185) — postalcode ja city eivät saa olla tyhjiä, ja
+// delivery_method:'email' vaatii kelvollisen sähköpostin (meillä ei ole
+// vakuutusyhtiölle sähköpostia, vain Vakuutusyhtiöt-taulun 'laskutusosoite'-
+// tekstikenttä, esim. "..., PL 2025, 20025 IF"). Puretaan postinumero+
+// kaupunki tuon tekstin lopusta, ja käytetään verkkolaskuosoitetta
+// (Vakuutusyhtiöt-taulun 'verkkolasku'-kenttä, esim. Ifillä oikea Tietoevry-
+// operaattoriosoite) delivery_method:'einvoice'-arvon kanssa sähköpostin
+// sijaan kun se on tiedossa. Jos yhtiöltä puuttuu nämä tiedot kokonaan
+// (esim. Turva/LähiTapiola/Pohjola tänään), Fennoa palauttaa taas 400:n —
+// silloin tiedot pitää ensin täyttää Vakuutusyhtiöt-tauluun.
+function jaaOsoitePostinumeroKaupunki(osoiteTeksti) {
+  const teksti = String(osoiteTeksti || '').trim();
+  const osuma = teksti.match(/(\d{5})\s+([^,]+)\s*$/);
+  if (osuma) {
+    return {
+      katuosoite: teksti.slice(0, osuma.index).replace(/[,\s]+$/, ''),
+      postinumero: osuma[1],
+      kaupunki: osuma[2].trim()
+    };
+  }
+  return { katuosoite: teksti, postinumero: '', kaupunki: '' };
+}
+
 function koostaVakuutusFennoaLaskuData(tyoRecord, vakuutusyhtioFields) {
   const tf = tyoRecord.fields;
   const vakuutusRivit = haeKaikkiLaskurivitTyolle(tyoRecord.id)
@@ -5019,25 +5043,42 @@ function koostaVakuutusFennoaLaskuData(tyoRecord, vakuutusyhtioFields) {
   );
 
   const yTunnus = String(vakuutusyhtioFields['Y-tunnus'] || '').trim();
+  const osoiteOsat = jaaOsoitePostinumeroKaupunki(vakuutusyhtioFields['laskutusosoite']);
+  const verkkolasku = String(vakuutusyhtioFields['verkkolasku'] || '').trim();
 
-  return {
+  if (!osoiteOsat.postinumero || !osoiteOsat.kaupunki) {
+    throw new Error('Vakuutusyhtiöltä (' + (vakuutusyhtioFields['yhtiön nimi'] || '?') +
+      ') puuttuu postinumero/kaupunki laskutusosoitteesta — täytä Vakuutusyhtiöt-taulun laskutusosoite-kenttä kokonaisena osoitteena (esim. "..., 20025 IF"), tai lisää tiedot Airtableen ennen kuin tämä toimii tälle yhtiölle.');
+  }
+
+  const laskuData = {
     customer_no: '',
     name: vakuutusyhtioFields['yhtiön nimi'] || '',
-    address: vakuutusyhtioFields['laskutusosoite'] || '',
-    postalcode: '',
-    city: '',
+    address: osoiteOsat.katuosoite,
+    postalcode: osoiteOsat.postinumero,
+    city: osoiteOsat.kaupunki,
     country: 'FI',
     vat_number: yTunnus ? ('FI' + yTunnus.replace('-', '')) : '',
     account_type_id: 1, // yritys
     invoice_date: invoiceDate,
     due_date: dueDate,
-    delivery_method: 'email', // ei väliä — jää joka tapauksessa luonnokseksi, ei lähde mihinkään ilman erillistä hyväksyntää+lähetystä
-    einvoice_address: '',
     locale: 'fi',
     order_identifier: tf['varausnumero'] || '',
     row: rows,
     laskuriviIdt: vakuutusRivit.map(r => r.id),
   };
+
+  // Ei sähköpostiosoitetta vakuutusyhtiölle, joten ei voida käyttää
+  // delivery_method:'email' (Fennoa vaatii silloin kelvollisen osoitteen).
+  // Käytetään verkkolaskuosoitetta jos se on tiedossa, muuten jätetään
+  // delivery_method kokonaan pois ja annetaan Fennoan käyttää tilin omaa
+  // oletusta — kumpikaan tapa ei lähetä mitään, koska lasku jää luonnokseksi.
+  if (verkkolasku) {
+    laskuData.delivery_method = 'einvoice';
+    laskuData.einvoice_address = verkkolasku;
+  }
+
+  return laskuData;
 }
 
 function luoVakuutusFennoaLasku(tyoId) {
