@@ -3969,6 +3969,48 @@ function suoritaVarauksenTallennus(data, kirjautunutEmail) {
 
       const vakuutustapaus = airtablePost(TABLE_VAKUUTUSTAPAUKSET, vakuutustapausFields);
       Logger.log('Vakuutustapaus luotu: ' + (vakuutustapaus && vakuutustapaus.id));
+
+      // OMAVASTUU LASKURIVEIKSI 18.9.2026 (Carlin pyynnöstä): Omavastuu ei
+      // aiemmin tuottanut MITÄÄN laskuriviä — se oli vain tieto Vakuutus-
+      // tapaus-tietueella, näkymätön kaikilla laskuilla. Nyt kun vakuutusyhtiö
+      // on valittu ja Omavastuu-summa on annettu, kirjataan kaksi riviä:
+      // asiakas maksaa omavastuun itse (+), ja sama summa vähennetään
+      // vakuutusyhtiön laskusta (-), koska vakuutusyhtiö korvaa vain
+      // omavastuun ylittävän osan. TARKOITUKSELLA EI VIELÄ ALV-jakoa
+      // yritysautoille (ALV-vähennyskelpoinen-kenttä) — Carl päätti
+      // 18.9.2026 että se tehdään omana isompana tehtävänä myöhemmin kaikille
+      // riveille (Lasi/Työ/Tarvikkeet/Kalibrointi/Omavastuu) yhdessä.
+      const omavastuuBrutto = numeroTaiNull(data.omavastuu);
+      if (omavastuuBrutto !== null && omavastuuBrutto > 0) {
+        const omavastuuNetto = omavastuuBrutto / ALV_KERROIN_LASKURIVIT;
+        try {
+          airtablePost('Laskurivit', {
+            'Nimike': 'Omavastuu',
+            'Työtilaus': [tyotilaus.id],
+            'Määrä': 1,
+            'Yksikköhinta (alv 0%)': omavastuuNetto,
+            'ALV %': 25.5,
+            'Maksaja': 'Asiakas',
+            'Lisääjä': kirjautunutEmail || '',
+            'Lähde': 'Varaus',
+            'Laskutettu': false,
+          });
+          airtablePost('Laskurivit', {
+            'Nimike': 'Omavastuu (vähennys vakuutuslaskusta)',
+            'Työtilaus': [tyotilaus.id],
+            'Määrä': 1,
+            'Yksikköhinta (alv 0%)': -omavastuuNetto,
+            'ALV %': 25.5,
+            'Maksaja': 'Vakuutusyhtiö',
+            'Lisääjä': kirjautunutEmail || '',
+            'Lähde': 'Varaus',
+            'Laskutettu': false,
+          });
+        } catch (omavastuuVirhe) {
+          Logger.log('HUOM: Omavastuun Laskurivien lisäys epäonnistui: ' + omavastuuVirhe.message);
+          lisaaMuokkausHistoriaan(tyotilaus.id, kirjautunutEmail || 'järjestelmä', '⚠️ Omavastuun laskurivien lisäys epäonnistui: ' + omavastuuVirhe.message);
+        }
+      }
     }
 
     const kalenteriTulos = luoKalenteritapahtuma({
