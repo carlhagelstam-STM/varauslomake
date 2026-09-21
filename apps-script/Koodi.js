@@ -997,8 +997,13 @@ function doGetSisainen(e) {
         return jsonVastaus({ ok: false, error: 'Virheellinen työn tunniste.' });
       }
 
-      const formula = `FIND("${tyoId}", ARRAYJOIN({Työtilaus}))`;
-      const rivit = airtableListAll('Laskurivit', formula, 'Lisätty', 'asc');
+      // KORJAUS 21.9.2026: ARRAYJOIN({Työtilaus}) palauttaa linkitetyn
+      // työtilausrivin NÄYTTÖNIMEN (esim. "STM-2026-V00166"), ei sen
+      // record id:tä — FIND(tyoId, ...) ei siis KOSKAAN löytänyt mitään,
+      // vaikka rivejä oikeasti olisi ollut. Sama bugi löydettiin ja
+      // korjattiin jo laskutuspuolella 16.9.2026 (ks. haeKaikkiLaskurivitTyolle-
+      // kommentti) — tämä webhook jäi silloin vielä korjaamatta.
+      const rivit = haeKaikkiLaskurivitTyolle(tyoId);
 
       const laskurivit = rivit.map(r => ({
         id: r.id,

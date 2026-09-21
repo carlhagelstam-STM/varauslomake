@@ -216,6 +216,42 @@
   }
   .btn-kuvat.done { border-color: var(--success); color: var(--success); }
 
+  /* ── TARVIKKEET / LISÄMYYNTI (Laskurivit) — UUSI 21.9.2026 ── */
+  .btn-laskurivit {
+    width: 100%; padding: 10px; margin-top: 8px; font-size: 14px; font-weight: 700;
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border2);
+    border-radius: var(--radius); cursor: pointer;
+  }
+  .laskurivit-box {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: var(--radius-lg); padding: 18px; max-width: 400px; width: 100%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .laskurivit-otsikko { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+  .laskurivit-lista { margin-bottom: 14px; max-height: 240px; overflow-y: auto; }
+  .laskurivi-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 0; border-top: 1px solid var(--border);
+  }
+  .laskurivi-row:first-child { border-top: none; }
+  .laskurivi-nimike { font-size: 13px; color: var(--text); font-weight: 600; }
+  .laskurivi-ala { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .laskurivi-poista {
+    background: none; border: none; color: var(--text3); font-size: 15px; cursor: pointer;
+    padding: 4px 8px; flex-shrink: 0;
+  }
+  .laskurivi-poista:hover { color: var(--danger); }
+  .laskurivi-laskutettu {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--text3); background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 3px 8px; flex-shrink: 0;
+  }
+  .laskurivit-lisaa input, .laskurivit-lisaa select {
+    width: 100%; font-family: 'Manrope', sans-serif; font-size: 13px; padding: 8px 10px;
+    border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); margin-bottom: 8px; -webkit-appearance: none; appearance: none;
+  }
+
   main { padding: 16px; max-width: 640px; margin: 0 auto; }
 
   #status-msg {
@@ -377,7 +413,7 @@
   <div class="kuva-topbar">
     <div>
       <div class="kuva-ohje-teksti" id="kuva-ohje-teksti">Kuva edestä</div>
-      <div class="kuva-ohje-sub" id="kuva-ohje-sub">Kuva 1 / 6</div>
+      <div class="kuva-ohje-sub" id="kuva-ohje-sub">Kuva 1 / 3</div>
     </div>
     <button class="kuva-sulje-btn" id="kuva-sulje-btn">✕</button>
   </div>
@@ -812,11 +848,13 @@ async function lataaTyot(hiljaa) {
 }
 
 // ── KUVAUSNÄKYMÄ (OSA 1: kamera + esikatselu, EI VIELÄ Drive-tallennusta) ──
+// KORJAUS 21.9.2026: Carl vahvisti että pakollisia kuvia riittää olla vain
+// kolme — kuva edestä sekä kaksi vauriokuvaa (kuljettaja/takaa/matkustaja-
+// kuvat poistettu pakollisista, aiemmin niitä oli kuusi). Tämä vastaa myös
+// asentajien painettua ohjetta (OHJE_TUULILASINVAIHTOON): "1. kuva edestä
+// (rekisterinumero näkyy), 2. kuva vauriokohdasta".
 const PAKOLLISET_KUVAT = [
   { id: 'edesta',      label: 'Kuva edestä' },
-  { id: 'kuljettaja',  label: 'Kuva kuljettaja' },
-  { id: 'takaa',       label: 'Kuva takaa' },
-  { id: 'matkustaja',  label: 'Kuva matkustaja' },
   { id: 'vaurio_1',    label: 'Kuva vaurio 1' },
   { id: 'vaurio_2',    label: 'Kuva vaurio 2' },
 ];
@@ -1001,7 +1039,7 @@ function avaaEsikatselu() {
   paivitaHyvaksyNappi();
 }
 
-// Näyttää Hyväksy-napin vain jos kaikki 6 pakollista kuvaa on otettu —
+// Näyttää Hyväksy-napin vain jos kaikki pakolliset kuvat (ks. PAKOLLISET_KUVAT)
 // muuten se piilotetaan, ettei työtä voi vahingossa hyväksyä kesken.
 function paivitaHyvaksyNappi() {
   const btn = document.getElementById('preview-hyvaksy');
@@ -1402,6 +1440,156 @@ function avaaAlkutarkastusNakyma(tyo) {
 
 // Näyttää "Työn alla" -badgen + Valmis/Poikkeama-napit
 
+// ── TARVIKKEET / LISÄMYYNTI (Laskurivit) — UUSI 21.9.2026 ──
+// Käyttää samaa Laskurivit-taulua ja samoja Koodi.gs-webhookeja
+// (haeLaskurivit / lisaaLaskurivi / poistaLaskurivi) jotka on jo rakennettu
+// varauslomaketta varten. Asentaja voi lisätä työlle huomaamansa tarvikkeen
+// tai lisämyynnin paikan päällä (esim. sulat, pinnoitus) — rivi merkitään
+// Lähde="Asentaja lisäsi", jotta se erottuu varausvaiheessa lisätyistä.
+const MAKSAJA_VAIHTOEHDOT = ['Asiakas', 'Vakuutusyhtiö', 'Leasing-yhtiö', 'Työnantaja', 'Käteinen/Kortti'];
+const LASKURIVI_OLETUS_ALV = 25.5;
+
+function escapeHtml(teksti) {
+  const div = document.createElement('div');
+  div.textContent = teksti == null ? '' : String(teksti);
+  return div.innerHTML;
+}
+
+// Laskurivit-taulun "Yksikköhinta (alv 0%)" on aina alviton — asentajalle
+// näytetään ja häneltä kysytään aina asiakkaan maksama (alvillinen) hinta,
+// sama tapa kuin varauslomakkeella jo on.
+function laskuriviBruttoHinta(rivi) {
+  const netto = Number(rivi.yksikkohinta) || 0;
+  const alv = rivi.alvProsentti != null && rivi.alvProsentti !== '' ? Number(rivi.alvProsentti) : LASKURIVI_OLETUS_ALV;
+  return netto * (1 + alv / 100);
+}
+
+function avaaLaskurivitNakyma(tyo) {
+  const overlay = document.createElement('div');
+  overlay.className = 'tyo-modal-overlay';
+  overlay.style.zIndex = '350';
+  const wrap = document.createElement('div');
+  wrap.className = 'tyo-modal-wrap';
+  wrap.innerHTML = `
+    <button class="tyo-modal-close">✕</button>
+    <div class="laskurivit-box">
+      <div class="laskurivit-otsikko">🧾 Tarvikkeet / lisämyynti</div>
+      <div class="laskurivit-lista" id="lr-lista">
+        <div style="text-align:center;color:var(--text3);padding:12px;font-size:13px;">Ladataan...</div>
+      </div>
+      <div class="laskurivit-lisaa">
+        <input type="text" id="lr-nimike" placeholder="Nimike (esim. Sulat)" />
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="lr-hinta" placeholder="Hinta € (asiakkaalle)" inputmode="decimal" style="flex:1;" />
+          <select id="lr-maksaja" style="flex:1;">
+            ${MAKSAJA_VAIHTOEHDOT.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('')}
+          </select>
+        </div>
+        <button id="lr-lisaa-btn" class="btn-aloita" style="margin-top:2px;">+ Lisää</button>
+      </div>
+    </div>
+  `;
+  overlay.appendChild(wrap);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  wrap.querySelector('.tyo-modal-close').addEventListener('click', () => overlay.remove());
+  document.body.appendChild(overlay);
+
+  async function paivitaLista() {
+    const listaEl = wrap.querySelector('#lr-lista');
+    if (!listaEl) return; // ikkuna on jo suljettu
+    try {
+      const url = WEBHOOK_URL + '?action=haeLaskurivit&tyoId=' + encodeURIComponent(tyo.id) + '&token=' + encodeURIComponent(accessToken);
+      const data = await fetchJson(url);
+      if (!data.ok) {
+        listaEl.innerHTML = `<div style="color:var(--danger);font-size:13px;padding:8px 0;">Virhe: ${escapeHtml(data.error || 'tuntematon')}</div>`;
+        return;
+      }
+      const rivit = data.laskurivit || [];
+      if (rivit.length === 0) {
+        listaEl.innerHTML = `<div style="text-align:center;color:var(--text3);padding:8px 0;font-size:13px;">Ei vielä rivejä</div>`;
+        return;
+      }
+      listaEl.innerHTML = rivit.map(r => `
+        <div class="laskurivi-row" data-id="${escapeHtml(r.id)}">
+          <div>
+            <div class="laskurivi-nimike">${escapeHtml(r.nimike)}</div>
+            <div class="laskurivi-ala">${laskuriviBruttoHinta(r).toFixed(2).replace('.', ',')} € · ${escapeHtml(r.maksaja)}${r.lahde === 'Asentaja lisäsi' ? ' · lisätty paikan päällä' : ''}</div>
+          </div>
+          ${r.laskutettu ? '<span class="laskurivi-laskutettu">Laskutettu</span>' : '<button class="laskurivi-poista" title="Poista">🗑</button>'}
+        </div>
+      `).join('');
+      listaEl.querySelectorAll('.laskurivi-poista').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const riviId = btn.closest('.laskurivi-row').dataset.id;
+          btn.disabled = true;
+          try {
+            const resp = await fetchJson(WEBHOOK_URL + '?action=poistaLaskurivi', {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify({ token: accessToken, riviId: riviId })
+            });
+            if (resp.ok) { showToast('Rivi poistettu', 'success'); paivitaLista(); }
+            else { showToast('Virhe: ' + (resp.error || 'tuntematon'), 'error'); btn.disabled = false; }
+          } catch (err) {
+            if (err.message !== 'ISTUNTO_VANHENTUNUT') showToast('Virhe: ' + err.message, 'error');
+            btn.disabled = false;
+          }
+        });
+      });
+    } catch (e) {
+      if (e.message === 'ISTUNTO_VANHENTUNUT') return;
+      listaEl.innerHTML = `<div style="color:var(--danger);font-size:13px;padding:8px 0;">Hakuvirhe: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  wrap.querySelector('#lr-lisaa-btn').addEventListener('click', async () => {
+    const nimikeEl = wrap.querySelector('#lr-nimike');
+    const hintaEl = wrap.querySelector('#lr-hinta');
+    const nimike = nimikeEl.value.trim();
+    const hintaRaw = hintaEl.value.replace(',', '.').trim();
+    const maksaja = wrap.querySelector('#lr-maksaja').value;
+    const hintaBrutto = parseFloat(hintaRaw);
+    if (!nimike) { showToast('Kirjoita ensin nimike', 'error'); return; }
+    if (!hintaRaw || isNaN(hintaBrutto) || hintaBrutto < 0) { showToast('Anna kelvollinen hinta', 'error'); return; }
+
+    const btn = wrap.querySelector('#lr-lisaa-btn');
+    btn.disabled = true;
+    btn.textContent = 'Lisätään...';
+    try {
+      const nettoHinta = hintaBrutto / (1 + LASKURIVI_OLETUS_ALV / 100);
+      const resp = await fetchJson(WEBHOOK_URL + '?action=lisaaLaskurivi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          token: accessToken,
+          tyoId: tyo.id,
+          nimike: nimike,
+          maara: 1,
+          yksikkohinta: nettoHinta,
+          alvProsentti: LASKURIVI_OLETUS_ALV,
+          maksaja: maksaja,
+          lahde: 'Asentaja lisäsi',
+        })
+      });
+      if (resp.ok) {
+        showToast('Lisätty: ' + nimike, 'success');
+        nimikeEl.value = '';
+        hintaEl.value = '';
+        paivitaLista();
+      } else {
+        showToast('Virhe: ' + (resp.error || 'tuntematon'), 'error');
+      }
+    } catch (e) {
+      if (e.message !== 'ISTUNTO_VANHENTUNUT') showToast('Virhe: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '+ Lisää';
+    }
+  });
+
+  paivitaLista();
+}
+
 function renderTyonAllaToiminnot(tyo, actionArea) {
   // KORJAUS 16.9.2026: perussarja katsotaan tallennetuksi jos JOKO tämän
   // selainistunnon oma muisti (tyo.kuvatTallennettu, asetettu heti
@@ -1414,6 +1602,7 @@ function renderTyonAllaToiminnot(tyo, actionArea) {
     <div class="badge-tyon-alla" style="margin-bottom:8px;">🔧 Työn alla</div>
     <button class="btn-kuvat" id="kuvat-nappi">📷 Lisää kuvia</button>
     ${onPerussarjaTallennettu ? '<button class="btn-nayta-kuvat" id="nayta-kuvat-nappi" style="margin-top:6px; width:100%; padding:8px; font-size:13px; background:var(--surface3); color:var(--text2); border:none; border-radius:var(--radius); cursor:pointer;">🖼️ Näytä kuvat</button>' : ''}
+    <button class="btn-laskurivit" id="laskurivit-nappi">🧾 Tarvikkeet / lisämyynti</button>
     <div style="display:flex; gap:8px; margin-top:8px;">
       <button class="btn-valmis" style="flex:1; padding:10px; font-size:14px; font-weight:700; background:var(--success); color:white; border:none; border-radius:var(--radius); cursor:pointer;">✅ Valmis</button>
       <button class="btn-poikkeama" style="flex:1; padding:10px; font-size:14px; font-weight:700; background:transparent; color:var(--danger); border:1px solid var(--danger); border-radius:var(--radius); cursor:pointer;">⚠️ Poikkeama</button>
@@ -1430,6 +1619,11 @@ function renderTyonAllaToiminnot(tyo, actionArea) {
   actionArea.querySelector('#kuvat-nappi').addEventListener('click', (ev) => {
     ev.stopPropagation();
     avaaKuvatNapista(tyo);
+  });
+
+  actionArea.querySelector('#laskurivit-nappi').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    avaaLaskurivitNakyma(tyo);
   });
 
   // UUSI 16.9.2026: "Näytä kuvat" avaa tallennetun Drive-kansion uuteen
