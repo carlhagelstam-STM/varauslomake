@@ -56,7 +56,103 @@ function tarkistaPyyntoRaja() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// SUORITUSKYKYLOKI 21.9.2026: Carl raportoi ajoittaista hitautta ilman
+// selkeää yksittäistä syytä. Tämän sijaan että arvataan mikä on hidas,
+// KAIKKI palvelinpyynnöt (sekä doGet että doPost) kirjataan nyt automaattisesti
+// yhteen Google Sheet -tiedostoon: kesto millisekunteina, onnistuiko, ja
+// mahdollinen virheviesti. Tätä ei tarvitse asentaa erikseen — ensimmäisellä
+// suorituskerralla luodaan sheet nimeltä "STM Suorituskykyloki" automaattisesti
+// omistajan (skriptin ajajan) Google Driveen, ja sen ID tallennetaan Script
+// Propertiesiin uudelleenkäyttöä varten.
+//
+// TÄRKEÄÄ: lokitus EI SAA KOSKAAN näkyä käyttäjälle hitautena tai virheenä.
+// Siksi koko lokitus on try/catchin sisällä ja epäonnistuminen vain
+// kirjataan Apps Scriptin omaan suoritushistoriaan (ei näy lomakkeella).
+// Jos loki kasvaa isoksi (>5000 riviä), vanhimmat rivit karsitaan pois
+// automaattisesti, jottei sheet itsessään ala hidastaa lokitusta.
+//
+// Alkuperäiset doGet/doPost-funktiot on nimetty uudelleen (doGetSisainen /
+// doPostSisainen) ja niiden edelle on lisätty ohut "wrapper", joka mittaa
+// ajan ja kirjaa rivin — mikään yksittäinen action-haara ei muutu.
+const SUORITUSKYKYLOKI_OTSIKKO = ['Aikaleima', 'Suunta', 'Toiminto', 'Kesto (ms)', 'Tila', 'Virhe'];
+const SUORITUSKYKYLOKI_MAX_RIVIA = 5000;
+
+function haeTaiLuoSuorituskykySheet() {
+  const props = PropertiesService.getScriptProperties();
+  const tallennettuId = props.getProperty('SUORITUSKYKYLOKI_SHEET_ID');
+  if (tallennettuId) {
+    try {
+      return SpreadsheetApp.openById(tallennettuId).getSheets()[0];
+    } catch (avausVirhe) {
+      Logger.log('Suorituskykylokin tallennettu sheet-ID ei toiminut, luodaan uusi: ' + avausVirhe.message);
+    }
+  }
+  const uusiTiedosto = SpreadsheetApp.create('STM Suorituskykyloki');
+  const lehti = uusiTiedosto.getSheets()[0];
+  lehti.setName('Loki');
+  lehti.appendRow(SUORITUSKYKYLOKI_OTSIKKO);
+  lehti.setFrozenRows(1);
+  props.setProperty('SUORITUSKYKYLOKI_SHEET_ID', uusiTiedosto.getId());
+  Logger.log('Uusi suorituskykyloki luotu: ' + uusiTiedosto.getUrl());
+  return lehti;
+}
+
+function kirjaaSuoritusloki(suunta, action, kestoMs, ok, virheteksti) {
+  try {
+    const lehti = haeTaiLuoSuorituskykySheet();
+    lehti.appendRow([
+      new Date(),
+      suunta,
+      action || '(tuntematon)',
+      kestoMs,
+      ok ? 'OK' : 'VIRHE',
+      virheteksti || ''
+    ]);
+    const rivimaara = lehti.getLastRow();
+    if (rivimaara > SUORITUSKYKYLOKI_MAX_RIVIA) {
+      lehti.deleteRows(2, rivimaara - SUORITUSKYKYLOKI_MAX_RIVIA); // rivi 1 = otsikko
+    }
+  } catch (lokiVirhe) {
+    Logger.log('Suorituskykylokin kirjaus epäonnistui (ei kriittistä): ' + lokiVirhe.message);
+  }
+}
+
+// Yhteinen ajastin+lokitin sekä doGetille että doPostille — kutsuu varsinaista
+// käsittelijää (doGetSisainen/doPostSisainen), mittaa keston ja kirjaa rivin,
+// palauttaen käsittelijän vastauksen muuttumattomana eteenpäin.
+function suoritaJaLokitaPyynto(suunta, kasittelijaFn, e) {
+  const alkuAika = Date.now();
+  const action = (e && e.parameter && e.parameter.action) || '(tuntematon)';
+  let tulos;
+  try {
+    tulos = kasittelijaFn(e);
+  } catch (poikkeus) {
+    kirjaaSuoritusloki(suunta, action, Date.now() - alkuAika, false, 'Poikkeus: ' + poikkeus.message);
+    throw poikkeus;
+  }
+  let ok = true;
+  let virhe = '';
+  try {
+    const data = JSON.parse(tulos.getContent());
+    ok = data.ok !== false;
+    if (!ok) virhe = data.error || '';
+  } catch (jasennysVirhe) {
+    // Vastaus ei ollut JSONia (harvinaista) — ei kaadeta lokitusta tämän takia.
+  }
+  kirjaaSuoritusloki(suunta, action, Date.now() - alkuAika, ok, virhe);
+  return tulos;
+}
+
 function doGet(e) {
+  return suoritaJaLokitaPyynto('GET', doGetSisainen, e);
+}
+
+function doPost(e) {
+  return suoritaJaLokitaPyynto('POST', doPostSisainen, e);
+}
+
+function doGetSisainen(e) {
   try {
     tarkistaVaadititutAsetukset();
     if (!tarkistaPyyntoRaja()) {
@@ -3407,7 +3503,7 @@ function kasitteleKuvienTallennus(e) {
   }
 }
 
-function doPost(e) {
+function doPostSisainen(e) {
   try {
     tarkistaVaadititutAsetukset();
     if (!tarkistaPyyntoRaja()) {
