@@ -1543,17 +1543,25 @@ function avaaLaskurivitNakyma(tyo) {
   }
 
   wrap.querySelector('#lr-lisaa-btn').addEventListener('click', async () => {
+    const btn = wrap.querySelector('#lr-lisaa-btn');
+    // KORJAUS 22.9.2026: suoja kaksoisnapautusta/-klikkausta vastaan —
+    // ilman tätä kosketusnäytöllä nopea tuplanapautus ehti lähettää saman
+    // rivin kahdesti ennen kuin btn.disabled ehti vaikuttaa (havaittu
+    // STM-2026-V00190:ssa, "Testi"-rivi syntyi kahdesti). Palvelinpuolella
+    // on nyt myös oma varmistus (ks. kasitteleLaskurivinLisays), mutta
+    // tämä estää turhan toisen pyynnön lähettämisen jo selaimessa.
+    if (btn.disabled) return;
+    btn.disabled = true;
+
     const nimikeEl = wrap.querySelector('#lr-nimike');
     const hintaEl = wrap.querySelector('#lr-hinta');
     const nimike = nimikeEl.value.trim();
     const hintaRaw = hintaEl.value.replace(',', '.').trim();
     const maksaja = wrap.querySelector('#lr-maksaja').value;
     const hintaBrutto = parseFloat(hintaRaw);
-    if (!nimike) { showToast('Kirjoita ensin nimike', 'error'); return; }
-    if (!hintaRaw || isNaN(hintaBrutto) || hintaBrutto < 0) { showToast('Anna kelvollinen hinta', 'error'); return; }
+    if (!nimike) { showToast('Kirjoita ensin nimike', 'error'); btn.disabled = false; return; }
+    if (!hintaRaw || isNaN(hintaBrutto) || hintaBrutto < 0) { showToast('Anna kelvollinen hinta', 'error'); btn.disabled = false; return; }
 
-    const btn = wrap.querySelector('#lr-lisaa-btn');
-    btn.disabled = true;
     btn.textContent = 'Lisätään...';
     try {
       const nettoHinta = hintaBrutto / (1 + LASKURIVI_OLETUS_ALV / 100);

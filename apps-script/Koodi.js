@@ -5399,12 +5399,48 @@ function kasitteleLaskurivinLisays(e) {
     const SALLITUT_LAHTEET = ['Varaus', 'Asentaja lisäsi', 'Manuaalinen'];
     const lahde = SALLITUT_LAHTEET.includes(body.lahde) ? body.lahde : 'Manuaalinen';
 
+    const maara = numeroTaiNull(body.maara) || 1;
+    const yksikkohinta = numeroTaiNull(body.yksikkohinta) || 0;
+    const alvProsentti = numeroTaiNull(body.alvProsentti) || 25.5;
+
+    // DUPLIKAATTIESTO 22.9.2026: Carl raportoi että sama rivi ("Testi")
+    // syntyi kahdesti kun asentaja.html:n Tarvikkeet/lisämyynti-ikkuna
+    // suljettiin ja avattiin uudelleen ilman että "+ Lisää" -nappia
+    // painettiin uudestaan (todennäköisesti kaksoisnapautus kosketus-
+    // näytöllä tai hidas verkko sai lähetyksen menemään kahdesti). Sama
+    // periaate kuin varauksen duplikaattiestossa (suoritaVarauksenTallennus)
+    // ja merkitseValmiiksi-lukossa: jos TÄSMÄLLEEN sama rivi (sama työ,
+    // nimike, hinta, maksaja, lähde) on lisätty viimeisen 30 sekunnin
+    // sisällä, palautetaan se olemassa oleva rivi uuden luonnin sijaan.
+    try {
+      const olemassaOlevatRivit = haeKaikkiLaskurivitTyolle(tyoId);
+      const kolmekymmentaSekuntiaSitten = Date.now() - 30 * 1000;
+      const duplikaatti = olemassaOlevatRivit.find(r => {
+        const f = r.fields;
+        if ((f['Nimike'] || '') !== nimike) return false;
+        if ((f['Maksaja'] || '') !== maksaja) return false;
+        if ((f['Lähde'] || '') !== lahde) return false;
+        if (Math.abs((parseFloat(f['Yksikköhinta (alv 0%)']) || 0) - yksikkohinta) > 0.001) return false;
+        const lisattyAika = new Date(f['Lisätty'] || 0).getTime();
+        return lisattyAika >= kolmekymmentaSekuntiaSitten;
+      });
+      if (duplikaatti) {
+        Logger.log('DUPLIKAATTI ESTETTY (Laskurivi): ' + nimike + ' / ' + tyoId + ' — palautetaan olemassa oleva ' + duplikaatti.id);
+        return jsonVastaus({ ok: true, id: duplikaatti.id, duplikaattiEstetty: true });
+      }
+    } catch (dupErr) {
+      // Duplikaattitarkistuksen epäonnistuminen ei saa estää oikean rivin
+      // lisäystä — parempi mahdollinen harvinainen duplikaatti kuin ettei
+      // rivi tallennu ollenkaan.
+      Logger.log('Laskurivin duplikaattitarkistus epäonnistui (ei kriittistä, jatketaan): ' + dupErr.message);
+    }
+
     const kentat = {
       'Nimike': nimike,
       'Työtilaus': [tyoId],
-      'Määrä': numeroTaiNull(body.maara) || 1,
-      'Yksikköhinta (alv 0%)': numeroTaiNull(body.yksikkohinta) || 0,
-      'ALV %': numeroTaiNull(body.alvProsentti) || 25.5,
+      'Määrä': maara,
+      'Yksikköhinta (alv 0%)': yksikkohinta,
+      'ALV %': alvProsentti,
       'Maksaja': maksaja,
       'Lisääjä': email,
       'Lähde': lahde,
