@@ -78,29 +78,57 @@ function tarkistaPyyntoRaja() {
 const SUORITUSKYKYLOKI_OTSIKKO = ['Aikaleima', 'Suunta', 'Toiminto', 'Kesto (ms)', 'Tila', 'Virhe'];
 const SUORITUSKYKYLOKI_MAX_RIVIA = 5000;
 
-function haeTaiLuoSuorituskykySheet() {
+// KORJAUS 22.9.2026: aiemmin tämä loi "STM Suorituskykyloki" -sheetin
+// LENNOSTA ensimmäisen pyynnön yhteydessä (SpreadsheetApp.create()), mikä
+// on huomattavasti hitaampi kuin tavallinen appendRow olemassa olevaan
+// sheettiin. Todennäköinen syy 22.9.2026 havaittuun "Tarra-virhe:
+// Unexpected token '<'"-virheeseen: itse tarra tallentui Driveen oikein,
+// mutta juuri tämä ensimmäinen SpreadsheetApp.create()-kutsu (joka
+// suoritetaan JOKAISEN pyynnön lopuksi, tämän lokituksen ansiosta) venytti
+// vastausaikaa niin paljon että selain/Google katkaisi yhteyden ennen kuin
+// varsinainen JSON-vastaus ehti perille — käyttäjälle näkyi HTML-virhesivu,
+// vaikka data oli jo tallessa.
+//
+// Nyt sheetin AUTOMAATTINEN luonti on poistettu pyynnön käsittelystä
+// kokonaan: kirjaaSuoritusloki lukee vain valmiiksi olemassa olevan sheetin,
+// ja jos sitä ei vielä ole, se yksinkertaisesti ei kirjaa mitään (ei
+// koskaan aiheuta viivettä tai virhettä oikealle pyynnölle). Sheet luodaan
+// KERRAN käsin Apps Script -editorista ajamalla luoSuorituskykylokiKerran().
+function haeSuorituskykySheet() {
   const props = PropertiesService.getScriptProperties();
   const tallennettuId = props.getProperty('SUORITUSKYKYLOKI_SHEET_ID');
-  if (tallennettuId) {
-    try {
-      return SpreadsheetApp.openById(tallennettuId).getSheets()[0];
-    } catch (avausVirhe) {
-      Logger.log('Suorituskykylokin tallennettu sheet-ID ei toiminut, luodaan uusi: ' + avausVirhe.message);
-    }
+  if (!tallennettuId) return null;
+  try {
+    return SpreadsheetApp.openById(tallennettuId).getSheets()[0];
+  } catch (avausVirhe) {
+    Logger.log('Suorituskykylokin tallennettu sheet-ID ei toiminut: ' + avausVirhe.message);
+    return null;
+  }
+}
+
+// KÄSIN AJETTAVA ASETUSFUNKTIO — aja tämä KERRAN Apps Script -editorissa
+// (▶-nappi), ei koskaan verkkopyynnön yhteydessä. Luo sheetin rauhassa,
+// ilman että kenenkään oikea pyyntö odottaa sitä.
+function luoSuorituskykylokiKerran() {
+  const olemassaOleva = haeSuorituskykySheet();
+  if (olemassaOleva) {
+    Logger.log('Suorituskykyloki on jo olemassa, ei luoda uutta.');
+    return 'Sheet on jo olemassa.';
   }
   const uusiTiedosto = SpreadsheetApp.create('STM Suorituskykyloki');
   const lehti = uusiTiedosto.getSheets()[0];
   lehti.setName('Loki');
   lehti.appendRow(SUORITUSKYKYLOKI_OTSIKKO);
   lehti.setFrozenRows(1);
-  props.setProperty('SUORITUSKYKYLOKI_SHEET_ID', uusiTiedosto.getId());
+  PropertiesService.getScriptProperties().setProperty('SUORITUSKYKYLOKI_SHEET_ID', uusiTiedosto.getId());
   Logger.log('Uusi suorituskykyloki luotu: ' + uusiTiedosto.getUrl());
-  return lehti;
+  return uusiTiedosto.getUrl();
 }
 
 function kirjaaSuoritusloki(suunta, action, kestoMs, ok, virheteksti) {
   try {
-    const lehti = haeTaiLuoSuorituskykySheet();
+    const lehti = haeSuorituskykySheet();
+    if (!lehti) return; // Sheettiä ei ole vielä luotu käsin — ei kirjata, ei viivytetä pyyntöä.
     lehti.appendRow([
       new Date(),
       suunta,
