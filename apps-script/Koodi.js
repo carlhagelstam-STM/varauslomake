@@ -3430,6 +3430,23 @@ function haeTaiLuoKuvakansio(nimi) {
   return paakansio.createFolder(nimi).getId();
 }
 
+// KÄSIN AJETTAVA ASETUSFUNKTIO 22.9.2026 — aja tämä KERRAN Apps Script
+// -editorissa (▶-nappi). Carl raportoi että asentaja.html:n "Näytä kuvat"
+// -nappi pyysi kirjautumista eikä sen jälkeenkään päästänyt katsomaan —
+// syy: koko Kuvat-pääkansio (DRIVE_KUVAT_FOLDER) oli täysin yksityinen,
+// vain omistajalla (Carl) oli pääsy. Tämä jakaa pääkansion "kuka tahansa
+// linkillä" -katseluoikeudella. Google Drive periyttää jaon automaattisesti
+// kaikkiin ALIKANSIOIHIN JA TIEDOSTOIHIN, myös jo olemassa oleviin ja
+// tuleviin — ei tarvitse ajaa uudelleen jokaiselle työlle erikseen.
+// EI vaadi enää kirjautumista ollenkaan, koska "kuka tahansa linkillä"
+// tarkoittaa ettei Google edes kysy tiliä.
+function jaaKuvakansioLinkilla() {
+  const kansio = DriveApp.getFolderById(DRIVE_KUVAT_FOLDER);
+  kansio.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  Logger.log('Kuvakansio jaettu: kuka tahansa linkillä pääsee katsomaan (ei muokkausoikeutta).');
+  return 'OK: kuvakansio jaettu linkillä katseluoikeudella.';
+}
+
 function tyhjennaKuvakansio(kansioId) {
   const kansio = DriveApp.getFolderById(kansioId);
   const tiedostot = kansio.getFiles();
