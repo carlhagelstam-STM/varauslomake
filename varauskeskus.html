@@ -729,10 +729,21 @@ function initGoogleAuth() {
 
   (async () => {
     await haeOmaEmail();
-    await lataaPisteJarjestys();
+    // KORJAUS 23.9.2026 (Carlin ilmoittama oire: "Ladataan varauksia" todella
+    // hidas): pistejärjestyksen haku ja varausten haku ovat kaksi erillistä,
+    // TOISISTAAN RIIPPUMATONTA palvelinkutsua, mutta ne odotettiin aiemmin
+    // PERÄKKÄIN (yhteenlaskettu kesto), vaikka ne voi tehdä RINNAKKAIN
+    // (vain hitaamman kesto). Apps Script -kutsut voivat kestää useita
+    // sekunteja kumpikin, joten tämä puolittaa tyypillisen odotusajan.
+    const pisteJarjestysValmis = lataaPisteJarjestys();
+    const varauksetValmis = lataaVaraukset();
+    await Promise.all([pisteJarjestysValmis, varauksetValmis]);
+    // Varmistetaan lopuksi vielä kerran, että näkymä (piste-tabit, otsikko)
+    // vastaa lopullista pistejärjestystä, jos se saapui myöhemmin kuin
+    // varaukset itse.
     paivitaViewToggleNakyvyys();
     paivitaNavLabel();
-    await lataaVaraukset();
+    renderoiKalenteri();
   })();
 }
 initGoogleAuth();
