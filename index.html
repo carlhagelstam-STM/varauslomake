@@ -190,6 +190,10 @@ function naytaSisaankirjautunut(email) {
 function naytaKirjautumisnappi() {
   document.getElementById('tarkistetaan-area').classList.add('hidden');
   document.getElementById('login-area').classList.remove('hidden');
+  // KORJAUS 23.9.2026: valikko näytetään nyt optimistisesti ennen taustatarkistusta
+  // (ks. yllä), joten se pitää muistaa piilottaa tässä, jos tarkistus paljastaa
+  // istunnon todella vanhentuneeksi.
+  document.getElementById('links-area').classList.add('hidden');
 }
 
 function naytaVirhe(viesti) {
@@ -205,6 +209,13 @@ function naytaVirhe(viesti) {
 // "Tarkistetaan kirjautumista..." -tilan sen sijaan.
 const olemassaOlevaIstunto = localStorage.getItem('stm_istunto');
 if (olemassaOlevaIstunto) {
+  // KORJAUS 23.9.2026 (Carlin ilmoittama oire): Etusivulle jäi joka kerta hetkeksi
+  // roikkumaan "Tarkistetaan kirjautumista..." -tila, koska palvelinkutsu
+  // (haeOmatOikeudet) voi joskus kestää useita sekunteja. Nyt valikko näytetään
+  // HETI tallennetun istunnon perusteella, ja tarkistus palvelimelta tehdään silti
+  // samalla huomaamatta taustalla. Jos istunto on oikeasti vanhentunut, valikko
+  // piilotetaan ja kirjautumisnappi näytetään vasta sitten (ks. naytaKirjautumisnappi).
+  naytaSisaankirjautunut();
   tarkistaIstuntoPalvelimelta(olemassaOlevaIstunto);
 } else {
   naytaKirjautumisnappi();
