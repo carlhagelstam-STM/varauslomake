@@ -1557,7 +1557,8 @@ function valimuistista(avain, hakuFn, onkoJaettu) {
 function tyhjennaValimuisti() {
   try {
     CacheService.getScriptCache().removeAll([
-      'v1_pisteet', 'v1_aukioloajat', 'v1_tyotyypit', 'v1_roolit', 'v1_adasosuus'
+      'v1_pisteet', 'v1_aukioloajat', 'v1_tyotyypit', 'v1_roolit', 'v1_adasosuus',
+      'asentajat_aktiiviset', 'lukitukset_kaikki'
     ]);
     _pyyntoMuisti = {};
     Logger.log('Välimuisti tyhjennetty.');
@@ -2028,16 +2029,25 @@ function laskePisteenAikataulu(pisteNimi, paivamaaraStr, sijoituksetKaikki, kaik
   };
 }
 
+// KORJAUS 23.9.2026 (Carlin ilmoittama oire: aikavalinta avautuu hitaasti):
+// nama kaksi haettiin ennen JOKA IKISELLA haePisteenViikko/haeKapasiteetti-
+// LandingPage-kutsulla uudestaan Airtablesta (onkoJaettu=false = ei
+// CacheService-valimuistia, vain saman ajon sisainen muisti). Asentajalista
+// ja lukitukset (poissaolot/siirrot) eivat muutu sekunnin tarkkuudella, joten
+// nyt niita jaetaan CacheServicen kautta 10 min ajan (sama TTL kuin
+// aukioloajoilla/tyotyypeilla), mika saastaa 2 Airtable-kutsua useimmilla
+// pyynnoilla kun joku toinen kayttaja on jo ladannut saman datan viime
+// 10 min sisalla.
 function haeAktiivisetAsentajat() {
   return valimuistista('asentajat_aktiiviset', function() {
     return airtableListAll(TABLE_ASENTAJAT, `{tila}="Aktiivinen"`, null, null);
-  }, false);
+  }, true);
 }
 
 function haeKaikkiLukitukset() {
   return valimuistista('lukitukset_kaikki', function() {
     return airtableListAll(TABLE_LUKITUKSET, 'TRUE()', null, null);
-  }, false);
+  }, true);
 }
 
 function haePaivanTyotKaikkiPisteet(paivamaaraStr) {
