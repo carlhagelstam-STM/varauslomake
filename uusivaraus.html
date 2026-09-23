@@ -2536,15 +2536,27 @@ async function lataaPisteenViikko() {
 // — ei tarvitse skrollata sivuttain nähdäkseen koko kahden viikon tilanteen.
 const PAIVAT_LYHYT = { 'Maanantai':'Ma', 'Tiistai':'Ti', 'Keskiviikko':'Ke', 'Torstai':'To', 'Perjantai':'Pe', 'Lauantai':'La', 'Sunnuntai':'Su' };
 
-function luoRuutuChip(tila) {
+// KORJAUS 23.9.2026 (Carlin pyyntö): varatut ruudut väritetään nyt työn
+// TYYPIN mukaan (sama väripaletti kuin Varauskeskuksen viikkonäkymässä),
+// ja vararuudut (kiintiön ylittävät / katkoviivan jälkeiset ruudut) saavat
+// oman täyttövärin pelkän katkoviivakehyksen sijaan, jotta ne erottuvat
+// vapaista ruuduista myös ilman hiirtä päällä.
+const TYYPPI_VARI = {
+  'Vaihto':      '#2563eb',
+  'Korjaus':     '#0f6e56',
+  'Reklamaatio': '#dc2626',
+};
+
+function luoRuutuChip(tila, tyyppi) {
   const chip = document.createElement('div');
   chip.style.cssText = 'width:100%;height:9px;border-radius:2px;';
   if (tila === 'varattu') {
-    chip.style.background = 'var(--surface2)';
-    chip.style.border = '0.5px solid var(--border2)';
+    const vari = TYYPPI_VARI[tyyppi] || 'var(--border2)';
+    chip.style.background = vari;
+    chip.style.border = '0.5px solid ' + vari;
   } else if (tila === 'ylitys') {
-    chip.style.background = 'transparent';
-    chip.style.border = '1px dashed var(--border2)';
+    chip.style.background = 'rgba(251,191,36,0.18)';
+    chip.style.border = '1px dashed var(--warning)';
   } else {
     chip.style.background = 'var(--success-light)';
     chip.style.border = '0.5px solid var(--success)';
@@ -2669,6 +2681,13 @@ function renderoiViikkoGrid() {
         const rivitRuudukkoon = [];
         let kertymaMin = aukiMin;
         let tyoIndeksi = 0;
+        let vapaaLaskuri = 0; // KORJAUS 23.9.2026: lasketaan näytetyt vapaat ruudut
+        // Kuinka monta AITOA vapaata ruutua asentajalle saa vielä näyttää
+        // vihreänä — palvelin on jo laskenut tämän asentajan kiintiöstä
+        // (joka riippuu mm. Kokemustaso/taitotaso-kentästä) miinus jo
+        // varatut työt. Puuttuessa (vanha palvelinversio) ei rajoiteta.
+        const vapaidenRuutujenMaara = typeof sarakeData.vapaidenRuutujenMaara === 'number'
+          ? sarakeData.vapaidenRuutujenMaara : Infinity;
         const RAJA = 30; // turvaraja, ettei silmukka voi karata
 
         while (rivitRuudukkoon.length < RAJA) {
@@ -2695,7 +2714,9 @@ function renderoiViikkoGrid() {
             // Vapaa ruutu mahtuu ennen seuraavaa työtä. Jos se menisi
             // sulkemisajan yli, se ei ole enää varattavissa suoraan.
             if (kertymaMin + askelMin > sulkeutuuMin) break;
-            rivitRuudukkoon.push({ tyo: null, aika: minuutitKloksi(kertymaMin), yliAjan: false });
+            const ylittaaKiintion = vapaaLaskuri >= vapaidenRuutujenMaara;
+            rivitRuudukkoon.push({ tyo: null, aika: minuutitKloksi(kertymaMin), yliAjan: ylittaaKiintion });
+            vapaaLaskuri++;
             kertymaMin += askelMin;
           } else {
             // Väli on liian lyhyt tälle työnimikkeelle — hypätään työn kohdalle
@@ -2734,7 +2755,7 @@ function renderoiViikkoGrid() {
 
           let chip;
           if (tyo) {
-            chip = luoRuutuChip('varattu');
+            chip = luoRuutuChip('varattu', tyo.tyyppi);
             chip.title = aikaStr + ' — Varattu (' + (tyo.rekisteri || '—') + ')';
           } else if (onYlitys) {
             chip = luoRuutuChip('ylitys');
